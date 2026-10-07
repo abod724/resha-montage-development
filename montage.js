@@ -1,3 +1,77 @@
+// ============ شاشة الموافقة على الشروط ============
+(function initConsent() {
+  // انتظر تحميل الصفحة
+  function checkConsent() {
+    var hasConsented = localStorage.getItem('resha-consent') === 'true';
+    var consentOverlay = document.getElementById('consentOverlay');
+    var authOverlay = document.getElementById('authOverlay');
+
+    if (!consentOverlay) {
+      setTimeout(checkConsent, 200);
+      return;
+    }
+
+    if (hasConsented) {
+      // وافق من قبل → أخفِ شاشة الموافقة
+      consentOverlay.style.display = 'none';
+    } else {
+      // ما وافق → أخفِ تسجيل الدخول
+      consentOverlay.style.display = 'flex';
+      if (authOverlay) authOverlay.classList.add('hidden');
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', checkConsent);
+  } else {
+    checkConsent();
+  }
+
+  // احتياط: لو DOM تأخر
+  setTimeout(checkConsent, 500);
+})();
+
+// ربط checkbox + زر المتابعة
+document.addEventListener('DOMContentLoaded', function() {
+  var check = document.getElementById('consentCheck');
+  var btn = document.getElementById('consentBtn');
+
+  if (!check || !btn) return;
+
+  check.addEventListener('change', function() {
+    if (this.checked) {
+      btn.disabled = false;
+      btn.style.background = '#0f172a';
+      btn.style.cursor = 'pointer';
+    } else {
+      btn.disabled = true;
+      btn.style.background = '#cbd5e1';
+      btn.style.cursor = 'not-allowed';
+    }
+  });
+
+  btn.addEventListener('click', function() {
+    if (!check.checked) return;
+
+    // احفظ الموافقة
+    localStorage.setItem('resha-consent', 'true');
+    localStorage.setItem('resha-consent-date', new Date().toISOString());
+
+    // أخفِ شاشة الموافقة
+    var overlay = document.getElementById('consentOverlay');
+    if (overlay) overlay.style.display = 'none';
+
+    // أظهر شاشة تسجيل الدخول
+    var authOverlay = document.getElementById('authOverlay');
+    if (authOverlay) authOverlay.classList.remove('hidden');
+
+    // رسالة
+    if (typeof showToast === 'function') {
+      showToast('✅ شكراً لموافقتك');
+    }
+  });
+});
+
 // ============================================================
 // ريشة المونتاج — montage.js
 // ============================================================
