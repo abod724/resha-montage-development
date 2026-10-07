@@ -578,7 +578,6 @@ function loadImageFile(file){
   });
 }
 
-// ✅ loadVideoFile محسّن - يحفظ المدة الحقيقية
 function loadVideoFile(file){
   return new Promise(function(resolve,reject){
     var url=URL.createObjectURL(file);
@@ -1850,7 +1849,6 @@ async function deleteProjectById(id){
   } catch(err){showToast('فشل');}
 }
 
-// ✅ loadProjectData محسّن - يحفظ الصوت والمدة الحقيقية
 async function loadProjectData(data){
   if(!data)return;
   images=[];audioUpload=null;musicFile=null;recordedAudioBlob=null;selectedAudio=null;
@@ -1874,12 +1872,11 @@ async function loadProjectData(data){
           var url=URL.createObjectURL(blob);
           var video=document.createElement('video');
           video.src=url;
-          video.muted=false;  // ✅ الصوت مفعّل
+          video.muted=false;
           video.playsInline=true;
           video.preload='metadata';
           video.onloadedmetadata=function(){
             video.currentTime=saved.trim?saved.trim.start:0.1;
-            // ✅ استخدم المدة الحقيقية
             var realDuration=video.duration;
             if(!realDuration||isNaN(realDuration))realDuration=saved.originalDuration||saved.duration||18;
             images[i]={
@@ -1970,40 +1967,74 @@ function buildGalleryCategories(){
   });
 }
 
+// ✅ loadGallery محدّثة — تفلتر المحظورين (اتجاهين)
 async function loadGallery(){
   var list=document.getElementById('galleryList');
   list.innerHTML='<div class="empty-hint">جاري التحميل...</div>';
   try{
     var search=document.getElementById('gallerySearch').value.trim();
     var sortBy=document.getElementById('gallerySort').value;
-    var query=sb.from('projects').select('id,name,thumbnail,created_at,user_id,views,likes_count,category').eq('is_public',true);
-    if(currentGalleryFilter!=='all')query=query.eq('category',currentGalleryFilter);
-    if(search)query=query.ilike('name','%'+search+'%');
-    if(sortBy==='likes')query=query.order('likes_count',{ascending:false});
-    else if(sortBy==='views')query=query.order('views',{ascending:false});
-    else query=query.order('created_at',{ascending:false});
-    query=query.limit(60);
-    var r=await query;
-    if(r.error)throw r.error;
-    var data=r.data;
-    if(!data||data.length===0){list.innerHTML='<div class="empty-hint">لا توجد نتائج</div>';return;}
-    var html='<div class="gallery-grid">';
+
+    // ✅ 1. جلب قائمة المحظورين (اتجاهين)
+    var blockedIds = [];
+    try {
+      var blockR = await sb.rpc('get_blocked_users');
+      if (!blockR.error && blockR.data) {
+        blockedIds = blockR.data.map(function(b){ return b.blocked_user_id; });
+      }
+    } catch(e) {
+      console.warn('تعذّر جلب قائمة الحظر:', e);
+    }
+
+    // ✅ 2. بناء الاستعلام
+    var query = sb.from('projects')
+      .select('id,name,thumbnail,created_at,user_id,views,likes_count,category')
+      .eq('is_public', true);
+
+    // ✅ 3. فلترة المحظورين
+    if (blockedIds.length > 0) {
+      query = query.not('user_id', 'in', '(' + blockedIds.join(',') + ')');
+    }
+
+    if (currentGalleryFilter !== 'all') query = query.eq('category', currentGalleryFilter);
+    if (search) query = query.ilike('name', '%' + search + '%');
+
+    if (sortBy === 'likes') query = query.order('likes_count', { ascending: false });
+    else if (sortBy === 'views') query = query.order('views', { ascending: false });
+    else query = query.order('created_at', { ascending: false });
+
+    query = query.limit(60);
+
+    var r = await query;
+    if (r.error) throw r.error;
+
+    var data = r.data;
+    if (!data || data.length === 0) {
+      list.innerHTML = '<div class="empty-hint">لا توجد نتائج</div>';
+      return;
+    }
+
+    var html = '<div class="gallery-grid">';
     data.forEach(function(p){
-      var author=p.user_id?p.user_id.substring(0,8):'مستخدم';
-      html+='<div class="gallery-card" onclick="viewProject(\''+p.id+'\')">';
-      html+='<img class="gallery-thumb" src="'+(p.thumbnail||'')+'" alt="">';
-      html+='<div class="gallery-info">';
-      html+='<div class="gallery-title">'+escapeHtml(p.name)+'</div>';
-      html+='<div class="gallery-author">👤 '+author+'</div>';
-      html+='<div style="display:flex;gap:8px;margin-top:6px;font-size:10px;color:#64748b;font-weight:700;">';
-      html+='<span>❤️ '+(p.likes_count||0)+'</span>';
-      html+='<span>👁️ '+(p.views||0)+'</span>';
-      if(p.category)html+='<span style="background:#f1f5f9;padding:2px 6px;border-radius:4px;">'+escapeHtml(p.category)+'</span>';
-      html+='</div></div></div>';
+      var author = p.user_id ? p.user_id.substring(0,8) : 'مستخدم';
+      html += '<div class="gallery-card" onclick="viewProject(\'' + p.id + '\')">';
+      html += '<img class="gallery-thumb" src="' + (p.thumbnail || '') + '" alt="">';
+      html += '<div class="gallery-info">';
+      html += '<div class="gallery-title">' + escapeHtml(p.name) + '</div>';
+      html += '<div class="gallery-author">👤 ' + author + '</div>';
+      html += '<div style="display:flex;gap:8px;margin-top:6px;font-size:10px;color:#64748b;font-weight:700;">';
+      html += '<span>❤️ ' + (p.likes_count || 0) + '</span>';
+      html += '<span>👁️ ' + (p.views || 0) + '</span>';
+      if (p.category) html += '<span style="background:#f1f5f9;padding:2px 6px;border-radius:4px;">' + escapeHtml(p.category) + '</span>';
+      html += '</div></div></div>';
     });
-    html+='</div>';
-    list.innerHTML=html;
-  } catch(err){console.error(err);list.innerHTML='<div class="empty-hint">فشل التحميل</div>';}
+    html += '</div>';
+    list.innerHTML = html;
+
+  } catch(err) {
+    console.error('خطأ التحميل:', err);
+    list.innerHTML = '<div class="empty-hint">فشل التحميل</div>';
+  }
 }
 
 async function viewProject(id){
@@ -2461,5 +2492,5 @@ window.addEventListener('load',function(){
   }
   trackEvent('montage-زيارة');
   setTimeout(function(){pushHistory();},500);
-  console.log('✅ ريشة المونتاج v7.1 — إصلاح الصوت والمدة');
+  console.log('✅ ريشة المونتاج v7.2 — فلترة الحظر مفعّلة');
 });
