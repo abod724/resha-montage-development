@@ -1,80 +1,42 @@
-// ============ شاشة الموافقة على الشروط ============
+// ============ شاشة الموافقة ============
 (function initConsent() {
-  // انتظر تحميل الصفحة
   function checkConsent() {
     var hasConsented = localStorage.getItem('resha-consent') === 'true';
     var consentOverlay = document.getElementById('consentOverlay');
     var authOverlay = document.getElementById('authOverlay');
-
-    if (!consentOverlay) {
-      setTimeout(checkConsent, 200);
-      return;
-    }
-
+    if (!consentOverlay) { setTimeout(checkConsent, 200); return; }
     if (hasConsented) {
-      // وافق من قبل → أخفِ شاشة الموافقة
       consentOverlay.style.display = 'none';
     } else {
-      // ما وافق → أخفِ تسجيل الدخول
       consentOverlay.style.display = 'flex';
       if (authOverlay) authOverlay.classList.add('hidden');
     }
   }
-
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', checkConsent);
-  } else {
-    checkConsent();
-  }
-
-  // احتياط: لو DOM تأخر
+  } else { checkConsent(); }
   setTimeout(checkConsent, 500);
 })();
 
-// ربط checkbox + زر المتابعة
 document.addEventListener('DOMContentLoaded', function() {
   var check = document.getElementById('consentCheck');
   var btn = document.getElementById('consentBtn');
-
   if (!check || !btn) return;
-
   check.addEventListener('change', function() {
-    if (this.checked) {
-      btn.disabled = false;
-      btn.style.background = '#0f172a';
-      btn.style.cursor = 'pointer';
-    } else {
-      btn.disabled = true;
-      btn.style.background = '#cbd5e1';
-      btn.style.cursor = 'not-allowed';
-    }
+    if (this.checked) { btn.disabled = false; btn.style.background = '#0f172a'; btn.style.cursor = 'pointer'; }
+    else { btn.disabled = true; btn.style.background = '#cbd5e1'; btn.style.cursor = 'not-allowed'; }
   });
-
   btn.addEventListener('click', function() {
     if (!check.checked) return;
-
-    // احفظ الموافقة
     localStorage.setItem('resha-consent', 'true');
     localStorage.setItem('resha-consent-date', new Date().toISOString());
-
-    // أخفِ شاشة الموافقة
     var overlay = document.getElementById('consentOverlay');
     if (overlay) overlay.style.display = 'none';
-
-    // أظهر شاشة تسجيل الدخول
     var authOverlay = document.getElementById('authOverlay');
     if (authOverlay) authOverlay.classList.remove('hidden');
-
-    // رسالة
-    if (typeof showToast === 'function') {
-      showToast('✅ شكراً لموافقتك');
-    }
+    if (typeof showToast === 'function') showToast('✅ شكراً لموافقتك');
   });
 });
-
-// ============================================================
-// ريشة المونتاج — montage.js
-// ============================================================
 
 // ============ SUPABASE ============
 const SUPABASE_URL='https://yleopsinexfenzfxvmlb.supabase.co';
@@ -84,7 +46,6 @@ const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 let currentUser=null;
 let authMode='login';
 
-// ============ HELPERS ============
 function trackEvent(n){
   if(typeof goatcounter!=='undefined'&&goatcounter.count){
     goatcounter.count({path:n,title:n,event:true});
@@ -113,7 +74,6 @@ function debounce(fn,delay){
   };
 }
 
-// ============ LOADING ============
 var _loadingCancelled=false;
 function showLoading(m){
   _loadingCancelled=false;
@@ -130,7 +90,6 @@ window._cancelLoading=function(){
 };
 function isCancelled(){return _loadingCancelled;}
 
-// ============ AUTH ELEMENTS ============
 const authOverlay=document.getElementById('authOverlay');
 const authForm=document.getElementById('authForm');
 const authEmail=document.getElementById('authEmail');
@@ -158,7 +117,6 @@ function clearAuthMessages(){
   authSuccess.classList.remove('show');
 }
 
-// ============ OAUTH ============
 window.loginWithGitHub=async function(){
   const u=window.location.origin+window.location.pathname;
   const{data,error}=await sb.auth.signInWithOAuth({provider:'github',options:{redirectTo:u}});
@@ -170,7 +128,6 @@ window.loginWithGoogle=async function(){
   if(error)showToast('خطأ: '+error.message);
 };
 
-// ============ AUTH MODE ============
 function setAuthMode(mode){
   authMode=mode;
   clearAuthMessages();
@@ -194,7 +151,6 @@ function setAuthMode(mode){
 }
 setAuthMode('login');
 
-// ============ AUTH SUBMIT ============
 authForm.addEventListener('submit',async function(e){
   e.preventDefault();
   clearAuthMessages();
@@ -208,23 +164,11 @@ authForm.addEventListener('submit',async function(e){
   try{
     if(authMode==='signup'){
       const p2=authPassword2.value;
-      if(password!==p2){
-        showAuthError('كلمتا المرور غير متطابقتين');
-        authSubmitBtn.disabled=false;
-        authSubmitBtn.textContent=orig;
-        return;
-      }
-      const{data,error}=await sb.auth.signUp({
-        email,
-        password,
-        options:{emailRedirectTo:window.location.origin+window.location.pathname}
-      });
+      if(password!==p2){showAuthError('كلمتا المرور غير متطابقتين');authSubmitBtn.disabled=false;authSubmitBtn.textContent=orig;return;}
+      const{data,error}=await sb.auth.signUp({email,password,options:{emailRedirectTo:window.location.origin+window.location.pathname}});
       if(error)throw error;
-      if(data.user&&!data.session){
-        showAuthSuccess('✅ تم إنشاء الحساب! افتح بريدك واضغط رابط التأكيد.');
-      } else if(data.session){
-        onLoginSuccess(data.user);
-      }
+      if(data.user&&!data.session){showAuthSuccess('✅ تم إنشاء الحساب! افتح بريدك واضغط رابط التأكيد.');}
+      else if(data.session){onLoginSuccess(data.user);}
     } else {
       const{data,error}=await sb.auth.signInWithPassword({email,password});
       if(error)throw error;
@@ -242,7 +186,6 @@ authForm.addEventListener('submit',async function(e){
   }
 });
 
-// ============ LOGOUT ============
 document.getElementById('logoutBtn').addEventListener('click',async function(){
   if(!confirm('تسجيل الخروج؟'))return;
   await sb.auth.signOut();
@@ -250,7 +193,6 @@ document.getElementById('logoutBtn').addEventListener('click',async function(){
   location.reload();
 });
 
-// ============ ON LOGIN SUCCESS ============
 function onLoginSuccess(user){
   currentUser=user;
   authOverlay.classList.add('hidden');
@@ -260,7 +202,6 @@ function onLoginSuccess(user){
   setTimeout(function(){pushHistory();},600);
 }
 
-// ============ INIT AUTH ============
 (async function initAuth(){
   try{
     if(window.location.hash&&window.location.hash.includes('access_token')){
@@ -281,30 +222,22 @@ function onLoginSuccess(user){
   }
 })();
 
-// ============ AUTH STATE CHANGE ============
 sb.auth.onAuthStateChange(function(event,session){
   if(event==='SIGNED_OUT'){
     currentUser=null;
     authOverlay.classList.remove('hidden');
     document.getElementById('appRoot').classList.remove('ready');
   }
-  if(event==='SIGNED_IN'&&session&&session.user){
-    onLoginSuccess(session.user);
-  }
-  if(event==='PASSWORD_RECOVERY'){
-    document.getElementById('resetOverlay').classList.add('active');
-  }
+  if(event==='SIGNED_IN'&&session&&session.user){onLoginSuccess(session.user);}
+  if(event==='PASSWORD_RECOVERY'){document.getElementById('resetOverlay').classList.add('active');}
 });
 
-// ============ FORGOT PASSWORD ============
 document.getElementById('forgotBtn').addEventListener('click',async function(){
   const email=prompt('اكتب إيميلك:');
   if(!email)return;
   if(!email.includes('@')){showToast('إيميل غير صحيح');return;}
   try{
-    const{error}=await sb.auth.resetPasswordForEmail(email,{
-      redirectTo:window.location.origin+window.location.pathname
-    });
+    const{error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin+window.location.pathname});
     if(error)throw error;
     showToast('✅ تم إرسال الرابط');
   } catch(err){
@@ -312,7 +245,6 @@ document.getElementById('forgotBtn').addEventListener('click',async function(){
   }
 });
 
-// ============ RESET PASSWORD ============
 document.getElementById('resetForm').addEventListener('submit',async function(e){
   e.preventDefault();
   const p1=document.getElementById('resetPassword').value;
@@ -332,12 +264,9 @@ document.getElementById('resetForm').addEventListener('submit',async function(e)
   } catch(err){
     errEl.textContent=err.message||'فشل';
     errEl.classList.add('show');
-  } finally {
-    btn.disabled=false;
-  }
+  } finally {btn.disabled=false;}
 });
 
-// ============ GLOBAL STATE ============
 var images=[];
 var audioUpload=null,musicFile=null;
 var currentSize='1080x1080',currentTransition='fade',currentLayout='single';
@@ -355,7 +284,6 @@ var exportQuality='medium';
 var BITRATE_MAP={'low':3000000,'medium':8000000,'high':15000000,'ultra':25000000};
 var QUALITY_LABELS={'low':'منخفضة','medium':'متوسطة','high':'عالية','ultra':'فائقة'};
 
-// ============ HISTORY ============
 var historyArr=[];
 var historyIndex=-1;
 var MAX_HISTORY=30;
@@ -370,20 +298,11 @@ function captureState(){
         crop:i.crop,trim:i.trim,filter:i.filter
       };
     }),
-    currentSize:currentSize,
-    currentTransition:currentTransition,
-    currentLayout:currentLayout,
+    currentSize:currentSize,currentTransition:currentTransition,currentLayout:currentLayout,
     textElements:JSON.parse(JSON.stringify(textElements)),
     stickers:JSON.parse(JSON.stringify(stickers)),
-    watermark:watermark?{
-      enabled:watermark.enabled,type:watermark.type,text:watermark.text,
-      color:watermark.color,size:watermark.size,position:watermark.position,
-      opacity:watermark.opacity
-    }:null,
-    selectedAudio:selectedAudio,
-    backgroundMode:backgroundMode,
-    backgroundCustomColor:backgroundCustomColor,
-    exportQuality:exportQuality
+    watermark:watermark?{enabled:watermark.enabled,type:watermark.type,text:watermark.text,color:watermark.color,size:watermark.size,position:watermark.position,opacity:watermark.opacity}:null,
+    selectedAudio:selectedAudio,backgroundMode:backgroundMode,backgroundCustomColor:backgroundCustomColor,exportQuality:exportQuality
   });
 }
 
@@ -431,26 +350,24 @@ async function restoreState(json){
       var existing=oldImages.find(function(o){return o.src===saved.src;});
       if(existing){
         images.push({
-          type:saved.type,img:existing.img,media:existing.media,
-          originalImg:existing.originalImg,blob:existing.blob,src:saved.src,
-          animation:saved.animation,duration:saved.duration,rotation:saved.rotation,
-          flipH:saved.flipH,flipV:saved.flipV,speed:saved.speed,
-          crop:saved.crop,trim:saved.trim,filter:saved.filter
+          type:saved.type,img:existing.img,media:existing.media,originalImg:existing.originalImg,
+          blob:existing.blob,src:saved.src,animation:saved.animation,duration:saved.duration,
+          originalDuration:existing.originalDuration,rotation:saved.rotation,flipH:saved.flipH,
+          flipV:saved.flipV,speed:saved.speed,crop:saved.crop,trim:saved.trim,filter:saved.filter
         });
       } else {
         await new Promise(function(res){
           if(saved.type==='video'){
             var v=document.createElement('video');
-            v.src=saved.src;
-            v.muted=true;
-            v.playsInline=true;
-            v.preload='metadata';
+            v.src=saved.src;v.muted=false;v.playsInline=true;v.preload='metadata';
             v.onloadedmetadata=function(){
+              var realDur=v.duration;
+              if(!realDur||isNaN(realDur))realDur=saved.duration||18;
               images.push({
                 type:'video',img:v,media:v,originalImg:v,src:saved.src,
-                animation:saved.animation,duration:saved.duration,rotation:saved.rotation,
-                flipH:saved.flipH,flipV:saved.flipV,speed:saved.speed,
-                crop:saved.crop,trim:saved.trim,filter:saved.filter
+                animation:saved.animation,duration:saved.duration||realDur,
+                originalDuration:realDur,rotation:saved.rotation,flipH:saved.flipH,
+                flipV:saved.flipV,speed:saved.speed,crop:saved.crop,trim:saved.trim,filter:saved.filter
               });
               res();
             };
@@ -461,41 +378,25 @@ async function restoreState(json){
               images.push({
                 type:'image',img:im,media:im,originalImg:im,src:saved.src,
                 animation:saved.animation,duration:saved.duration,rotation:saved.rotation,
-                flipH:saved.flipH,flipV:saved.flipV,speed:saved.speed,
-                crop:saved.crop,trim:saved.trim,filter:saved.filter
+                flipH:saved.flipH,flipV:saved.flipV,speed:saved.speed,crop:saved.crop,
+                trim:saved.trim,filter:saved.filter
               });
               res();
             };
-            im.onerror=res;
-            im.src=saved.src;
+            im.onerror=res;im.src=saved.src;
           }
         });
       }
     }
-    currentSize=d.currentSize;
-    currentTransition=d.currentTransition;
-    currentLayout=d.currentLayout;
-    textElements=d.textElements||[];
-    stickers=d.stickers||[];
+    currentSize=d.currentSize;currentTransition=d.currentTransition;currentLayout=d.currentLayout;
+    textElements=d.textElements||[];stickers=d.stickers||[];
     if(d.backgroundMode)backgroundMode=d.backgroundMode;
     if(d.backgroundCustomColor)backgroundCustomColor=d.backgroundCustomColor;
     if(d.exportQuality)exportQuality=d.exportQuality;
-    watermark=d.watermark?{
-      enabled:d.watermark.enabled,type:d.watermark.type,text:d.watermark.text,
-      color:d.watermark.color,size:d.watermark.size,position:d.watermark.position,
-      opacity:d.watermark.opacity,img:window._wmImgCache||null
-    }:null;
-
-    document.querySelectorAll('#sizeOptions .opt-btn').forEach(function(b){
-      b.classList.toggle('active',b.dataset.size===currentSize);
-    });
-    document.querySelectorAll('#transitionOptions .opt-btn').forEach(function(b){
-      b.classList.toggle('active',b.dataset.transition===currentTransition);
-    });
-    document.querySelectorAll('#qualityOptions .opt-btn').forEach(function(b){
-      b.classList.toggle('active',b.dataset.quality===exportQuality);
-    });
-
+    watermark=d.watermark?{enabled:d.watermark.enabled,type:d.watermark.type,text:d.watermark.text,color:d.watermark.color,size:d.watermark.size,position:d.watermark.position,opacity:d.watermark.opacity,img:window._wmImgCache||null}:null;
+    document.querySelectorAll('#sizeOptions .opt-btn').forEach(function(b){b.classList.toggle('active',b.dataset.size===currentSize);});
+    document.querySelectorAll('#transitionOptions .opt-btn').forEach(function(b){b.classList.toggle('active',b.dataset.transition===currentTransition);});
+    document.querySelectorAll('#qualityOptions .opt-btn').forEach(function(b){b.classList.toggle('active',b.dataset.quality===exportQuality);});
     if(watermark&&watermark.enabled){
       document.getElementById('wmOn').classList.add('active');
       document.getElementById('wmOff').classList.remove('active');
@@ -505,36 +406,19 @@ async function restoreState(json){
       document.getElementById('wmOff').classList.add('active');
       document.getElementById('wmContent').classList.add('section-hidden');
     }
-    renderImagesGrid();
-    renderLayouts();
-    renderElementsList();
-    updateButtons();
-    updateInfo();
-  } finally {
-    isRestoring=false;
-  }
+    renderImagesGrid();renderLayouts();renderElementsList();updateButtons();updateInfo();
+  } finally {isRestoring=false;}
 }
 
-// ============ KEYBOARD SHORTCUTS ============
 document.addEventListener('keydown',function(e){
-  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'&&!e.shiftKey){
-    e.preventDefault();
-    undo();
-  } else if((e.ctrlKey||e.metaKey)&&(e.key.toLowerCase()==='y'||(e.shiftKey&&e.key.toLowerCase()==='z'))){
-    e.preventDefault();
-    redo();
-  }
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'&&!e.shiftKey){e.preventDefault();undo();}
+  else if((e.ctrlKey||e.metaKey)&&(e.key.toLowerCase()==='y'||(e.shiftKey&&e.key.toLowerCase()==='z'))){e.preventDefault();redo();}
 });
 
 document.getElementById('undoBtn').addEventListener('click',undo);
 document.getElementById('redoBtn').addEventListener('click',redo);
 
-// ============ CONSTANTS ============
-var POSITIONS={
-  'tl':{x:0.15,y:0.15},'tc':{x:0.5,y:0.15},'tr':{x:0.85,y:0.15},
-  'ml':{x:0.15,y:0.5},'mc':{x:0.5,y:0.5},'mr':{x:0.85,y:0.5},
-  'bl':{x:0.15,y:0.85},'bc':{x:0.5,y:0.85},'br':{x:0.85,y:0.85}
-};
+var POSITIONS={'tl':{x:0.15,y:0.15},'tc':{x:0.5,y:0.15},'tr':{x:0.85,y:0.15},'ml':{x:0.15,y:0.5},'mc':{x:0.5,y:0.5},'mr':{x:0.85,y:0.5},'bl':{x:0.15,y:0.85},'bc':{x:0.5,y:0.85},'br':{x:0.85,y:0.85}};
 var POSITION_LABELS={'tl':'↖','tc':'↑','tr':'↗','ml':'←','mc':'●','mr':'→','bl':'↙','bc':'↓','br':'↘'};
 
 var LAYOUTS=[
@@ -546,27 +430,17 @@ var LAYOUTS=[
   {id:'overlay',name:'تراكب',count:2,cells:[{x:0,y:0,w:1,h:1},{x:0.65,y:0.65,w:0.3,h:0.3,overlay:true}]}
 ];
 
-// ============ TEMPLATES ============
 var TEMPLATE_CATEGORIES=[
-  {id:'all',name:'الكل',emoji:'✨'},
-  {id:'religious',name:'ديني',emoji:'🕌'},
-  {id:'occasions',name:'مناسبات',emoji:'🎉'},
-  {id:'national',name:'وطني',emoji:'🇸🇦'},
-  {id:'travel',name:'سفر',emoji:'✈️'},
-  {id:'business',name:'أعمال',emoji:'💼'},
-  {id:'social',name:'سوشيال',emoji:'📱'},
-  {id:'mood',name:'مشاعر',emoji:'❤️'},
-  {id:'family',name:'عائلة',emoji:'👨‍👩‍👧'},
-  {id:'shapes',name:'أشكال',emoji:'🎨'}
+  {id:'all',name:'الكل',emoji:'✨'},{id:'religious',name:'ديني',emoji:'🕌'},
+  {id:'occasions',name:'مناسبات',emoji:'🎉'},{id:'national',name:'وطني',emoji:'🇸🇦'},
+  {id:'travel',name:'سفر',emoji:'✈️'},{id:'business',name:'أعمال',emoji:'💼'},
+  {id:'social',name:'سوشيال',emoji:'📱'},{id:'mood',name:'مشاعر',emoji:'❤️'},
+  {id:'family',name:'عائلة',emoji:'👨‍👩‍👧'},{id:'shapes',name:'أشكال',emoji:'🎨'}
 ];
 var currentTemplateCategory='all';
 
 function T(id,cat,name,emoji,size,trans,layout,anim,bg,txt,tc,st,sp){
-  return{
-    id:id,cat:cat,name:name,emoji:emoji,size:size,transition:trans,
-    layout:layout,animation:anim,bg:bg,bgMode:'color',text:txt,
-    textColor:tc,sticker:st,stickerPos:sp||'tc'
-  };
+  return{id:id,cat:cat,name:name,emoji:emoji,size:size,transition:trans,layout:layout,animation:anim,bg:bg,bgMode:'color',text:txt,textColor:tc,sticker:st,stickerPos:sp||'tc'};
 }
 
 var TEMPLATES=[
@@ -646,7 +520,6 @@ var TEMPLATES=[
 
 var EMOJIS=['😀','😂','😍','🥰','😎','🤩','😭','😱','🤔','🙄','😴','🤗','👍','👏','🙏','👌','✌️','🤝','💪','❤️','💕','💖','💔','✨','⭐','🌟','🔥','⚡','💫','🎉','🎊','🎈','🎁','🎂','🎓','👑','💎','🌸','🌹','🌺','🌻','🍀','🌈','☀️','🌙','⭐','🍕','🍔','☕','🍦','⚽','🏀','🎮','🎵','🎶','📱','💻','📸','💯','✅','❗','❓','💬','📍','🚀'];
 
-// ============ TABS ============
 window.switchTab=function(name,btn){
   document.querySelectorAll('.tab-btn').forEach(function(t){t.classList.remove('active');});
   document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('active');});
@@ -655,19 +528,16 @@ window.switchTab=function(name,btn){
   if(name==='animate')updateAnimateTab();
 };
 
-// ============ QUALITY ============
 document.querySelectorAll('#qualityOptions .opt-btn').forEach(function(btn){
   btn.addEventListener('click',function(){
     document.querySelectorAll('#qualityOptions .opt-btn').forEach(function(b){b.classList.remove('active');});
     this.classList.add('active');
     exportQuality=this.dataset.quality;
-    updateInfo();
-    pushHistory();
+    updateInfo();pushHistory();
     showToast('الجودة: '+QUALITY_LABELS[exportQuality]);
   });
 });
 
-// ============ IMAGE INPUT ============
 document.getElementById('imageInput').addEventListener('change',async function(e){
   var files=Array.from(e.target.files);
   if(files.length===0)return;
@@ -684,29 +554,20 @@ document.getElementById('imageInput').addEventListener('change',async function(e
   }
   hideLoading();
   if(!isCancelled()){
-    renderImagesGrid();
-    renderLayouts();
-    updateButtons();
-    updateInfo();
-    pushHistory();
+    renderImagesGrid();renderLayouts();updateButtons();updateInfo();pushHistory();
     showToast('تمت إضافة '+loaded+' عنصر');
   }
   e.target.value='';
   if(selectedImageIndex<0&&images.length>0){selectedImageIndex=0;renderImagesGrid();}
 });
 
-// ============ LOAD IMAGE ============
 function loadImageFile(file){
   return new Promise(function(resolve,reject){
     var reader=new FileReader();
     reader.onload=function(ev){
       var img=new Image();
       img.onload=function(){
-        images.push({
-          type:'image',img:img,media:img,originalImg:img,
-          animation:'none',duration:3,rotation:0,flipH:false,flipV:false,
-          src:ev.target.result,speed:1,crop:null,trim:null,filter:'none'
-        });
+        images.push({type:'image',img:img,media:img,originalImg:img,animation:'none',duration:3,rotation:0,flipH:false,flipV:false,src:ev.target.result,speed:1,crop:null,trim:null,filter:'none'});
         resolve();
       };
       img.onerror=reject;
@@ -717,7 +578,7 @@ function loadImageFile(file){
   });
 }
 
-// ============ LOAD VIDEO ============
+// ✅ loadVideoFile محسّن - يحفظ المدة الحقيقية
 function loadVideoFile(file){
   return new Promise(function(resolve,reject){
     var url=URL.createObjectURL(file);
@@ -727,29 +588,39 @@ function loadVideoFile(file){
     video.playsInline=true;
     video.preload='metadata';
     video.onloadedmetadata=function(){
+      var realDuration=video.duration;
+      if(!realDuration||isNaN(realDuration)||realDuration===Infinity){
+        setTimeout(function(){
+          realDuration=video.duration;
+          if(!realDuration||isNaN(realDuration))realDuration=18;
+          finishLoad(realDuration);
+        },500);
+        return;
+      }
+      finishLoad(realDuration);
+    };
+    function finishLoad(duration){
       video.currentTime=0.1;
       var done=false;
       var finish=function(){
         if(done)return;
         done=true;
-        var dur=Math.min(video.duration||5,60);
+        var dur=Math.min(duration,60);
         images.push({
-          type:'video',img:video,media:video,originalImg:video,
-          blob:file,src:url,animation:'fadeIn',duration:dur,
-          rotation:0,flipH:false,flipV:false,speed:1,
-          crop:null,trim:null,filter:'none'
+          type:'video',img:video,media:video,originalImg:video,blob:file,src:url,
+          animation:'fadeIn',duration:dur,originalDuration:dur,rotation:0,
+          flipH:false,flipV:false,speed:1,crop:null,trim:null,filter:'none'
         });
         resolve();
       };
       video.onseeked=finish;
       setTimeout(finish,2000);
-    };
+    }
     video.onerror=function(){reject(new Error('فشل تحميل الفيديو'));};
     setTimeout(function(){reject(new Error('انتهت المهلة'));},15000);
   });
 }
 
-// ============ RENDER IMAGES GRID ============
 function renderImagesGrid(){
   var grid=document.getElementById('imagesGrid');
   var emptyHint=document.getElementById('imagesEmpty');
@@ -803,16 +674,6 @@ function renderImagesGrid(){
       vBadge.textContent='🎥'+(item.trim?' ✂️':'');
       el.appendChild(vBadge);
     }
-    if(item.filter&&item.filter!=='none'){
-      var fBadge=document.createElement('div');
-      fBadge.className='image-badge';
-      fBadge.style.background='rgba(139,92,246,0.9)';
-      fBadge.style.top='auto';
-      fBadge.style.bottom='4px';
-      fBadge.style.right='4px';
-      fBadge.textContent='🎨';
-      el.appendChild(fBadge);
-    }
     var removeBtn=document.createElement('button');
     removeBtn.className='image-remove';
     removeBtn.textContent='×';
@@ -826,9 +687,7 @@ function renderImagesGrid(){
       badge.textContent=getAnimationLabel(item.animation);
       el.appendChild(badge);
     }
-    el.appendChild(mediaEl);
-    el.appendChild(removeBtn);
-    el.appendChild(order);
+    el.appendChild(mediaEl);el.appendChild(removeBtn);el.appendChild(order);
     el.addEventListener('click',function(){selectImage(index);});
     el.addEventListener('dragstart',handleDragStart);
     el.addEventListener('dragover',handleDragOver);
@@ -838,18 +697,11 @@ function renderImagesGrid(){
   });
 }
 
-// ============ ANIMATION LABELS ============
 function getAnimationLabel(a){
-  var l={
-    'none':'ثابتة','zoomIn':'زوم+','zoomOut':'زوم-','panRight':'→',
-    'panLeft':'←','panUp':'↑','panDown':'↓','rotate':'↻','pulse':'◎',
-    'fadeIn':'ظهور','kenRight':'Ken→','kenLeft':'Ken←','shake':'اهتزاز',
-    'bounce':'قفز','flip':'انقلاب'
-  };
+  var l={'none':'ثابتة','zoomIn':'زوم+','zoomOut':'زوم-','panRight':'→','panLeft':'←','panUp':'↑','panDown':'↓','rotate':'↻','pulse':'◎','fadeIn':'ظهور','kenRight':'Ken→','kenLeft':'Ken←','shake':'اهتزاز','bounce':'قفز','flip':'انقلاب'};
   return l[a]||'';
 }
 
-// ============ LAYOUTS ============
 function renderLayouts(){
   var grid=document.getElementById('layoutsGrid');
   if(!grid)return;
@@ -873,14 +725,11 @@ function getPreviewClass(id){
 
 function selectLayout(id){
   currentLayout=id;
-  renderLayouts();
-  updateInfo();
-  pushHistory();
+  renderLayouts();updateInfo();pushHistory();
   var layout=LAYOUTS.find(function(l){return l.id===id;});
   if(layout)showToast('التخطيط: '+layout.name);
 }
 
-// ============ SELECT IMAGE ============
 function selectImage(index){
   selectedImageIndex=index;
   document.querySelectorAll('.image-item').forEach(function(el,i){
@@ -890,7 +739,6 @@ function selectImage(index){
   updateAnimateTab();
 }
 
-// ============ ANIMATE TAB ============
 function updateAnimateTab(){
   var emptyEl=document.getElementById('animateEmpty');
   var contentEl=document.getElementById('animateContent');
@@ -921,7 +769,6 @@ function updateAnimateTab(){
   document.getElementById('customDuration').value=item.duration;
 }
 
-// ============ DRAG & DROP ============
 var dragIndex=null;
 function handleDragStart(e){dragIndex=parseInt(this.dataset.index);e.dataTransfer.effectAllowed='move';}
 function handleDragOver(e){e.preventDefault();}
@@ -933,36 +780,28 @@ function handleDrop(e){
   images.splice(dropIndex,0,m);
   if(selectedImageIndex===dragIndex)selectedImageIndex=dropIndex;
   else if(selectedImageIndex===dropIndex)selectedImageIndex=dragIndex;
-  renderImagesGrid();
-  pushHistory();
+  renderImagesGrid();pushHistory();
 }
 function handleDragEnd(){dragIndex=null;}
 
-// ============ REMOVE / EDIT IMAGE ============
 function removeImage(index){
   images.splice(index,1);
   if(selectedImageIndex===index)selectedImageIndex=-1;
   else if(selectedImageIndex>index)selectedImageIndex--;
-  renderImagesGrid();
-  updateButtons();
-  updateInfo();
-  updateAnimateTab();
-  pushHistory();
+  renderImagesGrid();updateButtons();updateInfo();updateAnimateTab();pushHistory();
 }
 
 function rotateImage(deg){
   if(selectedImageIndex<0)return;
   images[selectedImageIndex].rotation=(images[selectedImageIndex].rotation+deg)%360;
-  renderImagesGrid();
-  pushHistory();
+  renderImagesGrid();pushHistory();
 }
 
 function flipImage(dir){
   if(selectedImageIndex<0)return;
   if(dir==='h')images[selectedImageIndex].flipH=!images[selectedImageIndex].flipH;
   if(dir==='v')images[selectedImageIndex].flipV=!images[selectedImageIndex].flipV;
-  renderImagesGrid();
-  pushHistory();
+  renderImagesGrid();pushHistory();
 }
 
 function resetImageEdits(){
@@ -976,8 +815,7 @@ function resetImageEdits(){
     images[selectedImageIndex].img=images[selectedImageIndex].originalImg;
     images[selectedImageIndex].media=images[selectedImageIndex].originalImg;
   }
-  renderImagesGrid();
-  pushHistory();
+  renderImagesGrid();pushHistory();
   showToast('تم إعادة العنصر');
 }
 
@@ -985,27 +823,23 @@ window.rotateImage=rotateImage;
 window.flipImage=flipImage;
 window.resetImageEdits=resetImageEdits;
 
-// ============ CUSTOM DURATION ============
 window.applyCustomDuration=function(){
   if(selectedImageIndex<0)return;
   var val=parseInt(document.getElementById('customDuration').value);
   if(val<1||val>60){showToast('المدة: 1-60 ثانية');return;}
   images[selectedImageIndex].duration=val;
   document.querySelectorAll('#imageDurationOptions .opt-btn').forEach(function(btn){btn.classList.remove('active');});
-  updateInfo();
-  pushHistory();
+  updateInfo();pushHistory();
   showToast('تم تحديث المدة');
 };
 
-// ============ ANIMATION/SPEED/DURATION BUTTONS ============
 document.querySelectorAll('#animationOptions .opt-btn').forEach(function(btn){
   btn.addEventListener('click',function(){
     if(selectedImageIndex<0)return;
     images[selectedImageIndex].animation=this.dataset.animation;
     document.querySelectorAll('#animationOptions .opt-btn').forEach(function(b){b.classList.remove('active');});
     this.classList.add('active');
-    renderImagesGrid();
-    pushHistory();
+    renderImagesGrid();pushHistory();
   });
 });
 
@@ -1027,19 +861,16 @@ document.querySelectorAll('#imageDurationOptions .opt-btn').forEach(function(btn
     document.getElementById('customDuration').value=dur;
     document.querySelectorAll('#imageDurationOptions .opt-btn').forEach(function(b){b.classList.remove('active');});
     this.classList.add('active');
-    updateInfo();
-    pushHistory();
+    updateInfo();pushHistory();
   });
 });
 
-// ============ SIZE/TRANSITION/BG ============
 document.querySelectorAll('#sizeOptions .opt-btn').forEach(function(btn){
   btn.addEventListener('click',function(){
     document.querySelectorAll('#sizeOptions .opt-btn').forEach(function(b){b.classList.remove('active');});
     this.classList.add('active');
     currentSize=this.dataset.size;
-    updateInfo();
-    pushHistory();
+    updateInfo();pushHistory();
   });
 });
 
@@ -1048,8 +879,7 @@ document.querySelectorAll('#transitionOptions .opt-btn').forEach(function(btn){
     document.querySelectorAll('#transitionOptions .opt-btn').forEach(function(b){b.classList.remove('active');});
     this.classList.add('active');
     currentTransition=this.dataset.transition;
-    updateInfo();
-    pushHistory();
+    updateInfo();pushHistory();
   });
 });
 
@@ -1065,14 +895,12 @@ document.getElementById('bgCustomColor').addEventListener('input',function(){
   backgroundCustomColor=this.value;
 });
 
-// ============ BUTTONS STATE ============
 function updateButtons(){
   var h=images.length>0;
   document.getElementById('previewBtn').disabled=!h;
   document.getElementById('exportBtn').disabled=!h;
 }
 
-// ============ INFO UPDATE ============
 function updateInfo(){
   var td=0;
   images.forEach(function(i){td+=i.duration;});
@@ -1080,7 +908,7 @@ function updateInfo(){
   var layout=LAYOUTS.find(function(l){return l.id===currentLayout;});
   var bitrate=BITRATE_MAP[exportQuality]||8000000;
   document.getElementById('infoImages').textContent=images.length;
-  document.getElementById('infoDuration').textContent=td+' ثانية';
+  document.getElementById('infoDuration').textContent=td.toFixed(1)+' ثانية';
   document.getElementById('infoSize').textContent='~'+((td*bitrate/8)/1000000).toFixed(1)+' MB';
   document.getElementById('infoDimensions').textContent=sz[0]+' × '+sz[1];
   var qEl=document.getElementById('infoQuality');
@@ -1088,11 +916,7 @@ function updateInfo(){
   document.getElementById('infoLayout').textContent=layout?layout.name:'صورة واحدة';
   var ln=document.getElementById('layoutName');
   if(ln)ln.textContent=layout?layout.name:'صورة واحدة';
-  var tL={
-    'fade':'تلاشي','slideRight':'انزلاق يمين','slideLeft':'انزلاق يسار',
-    'slideUp':'انزلاق فوق','zoom':'تكبير','rotate':'دوران',
-    'book':'فتح كتاب','fold':'طي','none':'بدون'
-  };
+  var tL={'fade':'تلاشي','slideRight':'انزلاق يمين','slideLeft':'انزلاق يسار','slideUp':'انزلاق فوق','zoom':'تكبير','rotate':'دوران','book':'فتح كتاب','fold':'طي','none':'بدون'};
   document.getElementById('infoTransition').textContent=tL[currentTransition]||currentTransition;
   document.getElementById('infoTexts').textContent=textElements.length;
   document.getElementById('infoStickers').textContent=stickers.length;
@@ -1104,7 +928,6 @@ function updateInfo(){
   document.getElementById('infoAudio').textContent=al;
 }
 
-// ============ DRAW IMAGE IN CELL ============
 function drawImageInCell(ctx,item,x,y,w,h,opacity,animProgress){
   if(opacity===undefined)opacity=1;
   if(animProgress===undefined)animProgress=0;
@@ -1152,113 +975,52 @@ function drawImageInCell(ctx,item,x,y,w,h,opacity,animProgress){
   ctx.restore();
 }
 
-// ============ DRAW LAYOUT ============
 function drawLayout(ctx,startIndex,canvasW,canvasH,opacity,animProgress){
   if(opacity===undefined)opacity=1;
   if(animProgress===undefined)animProgress=0;
   var layout=LAYOUTS.find(function(l){return l.id===currentLayout;});
   if(!layout)return;
-  if(backgroundMode==='color'){
-    ctx.fillStyle=backgroundCustomColor;
-    ctx.fillRect(0,0,canvasW,canvasH);
-  } else {
-    ctx.fillStyle='#000';
-    ctx.fillRect(0,0,canvasW,canvasH);
-  }
+  if(backgroundMode==='color'){ctx.fillStyle=backgroundCustomColor;ctx.fillRect(0,0,canvasW,canvasH);}
+  else{ctx.fillStyle='#000';ctx.fillRect(0,0,canvasW,canvasH);}
   layout.cells.forEach(function(cell,i){
     var imgIdx=(startIndex+i)%images.length;
     var item=images[imgIdx];
     if(!item)return;
     var x=cell.x*canvasW,y=cell.y*canvasH,w=cell.w*canvasW,h=cell.h*canvasH;
     if(cell.overlay){
-      ctx.save();
-      ctx.shadowColor='rgba(0,0,0,0.5)';
-      ctx.shadowBlur=15;
-      ctx.fillStyle='#fff';
-      ctx.fillRect(x-5,y-5,w+10,h+10);
-      ctx.restore();
+      ctx.save();ctx.shadowColor='rgba(0,0,0,0.5)';ctx.shadowBlur=15;
+      ctx.fillStyle='#fff';ctx.fillRect(x-5,y-5,w+10,h+10);ctx.restore();
     }
     drawImageInCell(ctx,item,x,y,w,h,opacity,animProgress);
   });
 }
 
-// ============ DRAW TRANSITION ============
 function drawTransition(ctx,prevStart,nextStart,canvasW,canvasH,progress){
   var t=Math.min(1,Math.max(0,progress));
   var ease=1-Math.pow(1-t,3);
   drawLayout(ctx,prevStart,canvasW,canvasH,1,1);
   ctx.save();
   switch(currentTransition){
-    case 'fade':
-      ctx.globalAlpha=ease;
-      drawLayout(ctx,nextStart,canvasW,canvasH,1,0);
-      break;
-    case 'slideRight':
-      ctx.translate(canvasW*(1-ease),0);
-      drawLayout(ctx,nextStart,canvasW,canvasH,1,0);
-      break;
-    case 'slideLeft':
-      ctx.translate(-canvasW*(1-ease),0);
-      drawLayout(ctx,nextStart,canvasW,canvasH,1,0);
-      break;
-    case 'slideUp':
-      ctx.translate(0,canvasH*(1-ease));
-      drawLayout(ctx,nextStart,canvasW,canvasH,1,0);
-      break;
-    case 'zoom':
-      var zs=0.3+ease*0.7;
-      ctx.translate(canvasW/2,canvasH/2);
-      ctx.scale(zs,zs);
-      ctx.globalAlpha=ease;
-      ctx.translate(-canvasW/2,-canvasH/2);
-      drawLayout(ctx,nextStart,canvasW,canvasH,1,0);
-      break;
-    case 'rotate':
-      ctx.translate(canvasW/2,canvasH/2);
-      ctx.rotate(ease*Math.PI*2);
-      var rs=0.2+ease*0.8;
-      ctx.scale(rs,rs);
-      ctx.globalAlpha=ease;
-      ctx.translate(-canvasW/2,-canvasH/2);
-      drawLayout(ctx,nextStart,canvasW,canvasH,1,0);
-      break;
-    case 'book':
-      var ba=ease*Math.PI;
-      ctx.translate(canvasW,canvasH/2);
-      ctx.rotate(-Math.PI+ba);
-      ctx.globalAlpha=ease;
-      ctx.translate(-canvasW,-canvasH/2);
-      drawLayout(ctx,nextStart,canvasW,canvasH,1,0);
-      break;
-    case 'fold':
-      var fa=ease*Math.PI/2;
-      ctx.translate(canvasW/2,canvasH/2);
-      ctx.scale(Math.cos(fa),1);
-      ctx.globalAlpha=ease;
-      ctx.translate(-canvasW/2,-canvasH/2);
-      drawLayout(ctx,nextStart,canvasW,canvasH,1,0);
-      break;
-    default:
-      drawLayout(ctx,nextStart,canvasW,canvasH,1,0);
-      break;
+    case 'fade':ctx.globalAlpha=ease;drawLayout(ctx,nextStart,canvasW,canvasH,1,0);break;
+    case 'slideRight':ctx.translate(canvasW*(1-ease),0);drawLayout(ctx,nextStart,canvasW,canvasH,1,0);break;
+    case 'slideLeft':ctx.translate(-canvasW*(1-ease),0);drawLayout(ctx,nextStart,canvasW,canvasH,1,0);break;
+    case 'slideUp':ctx.translate(0,canvasH*(1-ease));drawLayout(ctx,nextStart,canvasW,canvasH,1,0);break;
+    case 'zoom':var zs=0.3+ease*0.7;ctx.translate(canvasW/2,canvasH/2);ctx.scale(zs,zs);ctx.globalAlpha=ease;ctx.translate(-canvasW/2,-canvasH/2);drawLayout(ctx,nextStart,canvasW,canvasH,1,0);break;
+    case 'rotate':ctx.translate(canvasW/2,canvasH/2);ctx.rotate(ease*Math.PI*2);var rs=0.2+ease*0.8;ctx.scale(rs,rs);ctx.globalAlpha=ease;ctx.translate(-canvasW/2,-canvasH/2);drawLayout(ctx,nextStart,canvasW,canvasH,1,0);break;
+    case 'book':var ba=ease*Math.PI;ctx.translate(canvasW,canvasH/2);ctx.rotate(-Math.PI+ba);ctx.globalAlpha=ease;ctx.translate(-canvasW,-canvasH/2);drawLayout(ctx,nextStart,canvasW,canvasH,1,0);break;
+    case 'fold':var fa=ease*Math.PI/2;ctx.translate(canvasW/2,canvasH/2);ctx.scale(Math.cos(fa),1);ctx.globalAlpha=ease;ctx.translate(-canvasW/2,-canvasH/2);drawLayout(ctx,nextStart,canvasW,canvasH,1,0);break;
+    default:drawLayout(ctx,nextStart,canvasW,canvasH,1,0);break;
   }
   ctx.restore();
 }
 
-// ============ DRAW TEXT ============
 function drawTextElement(ctx,el,cw,ch){
   var fs=el.size*Math.min(cw,ch)/100;
   ctx.save();
   ctx.font='bold '+fs+'px '+el.font;
-  ctx.textAlign='center';
-  ctx.textBaseline='middle';
+  ctx.textAlign='center';ctx.textBaseline='middle';
   ctx.translate(el.x*cw,el.y*ch);
-  if(el.shadow){
-    ctx.shadowColor='rgba(0,0,0,0.85)';
-    ctx.shadowBlur=fs*0.15;
-    ctx.shadowOffsetX=2;
-    ctx.shadowOffsetY=2;
-  }
+  if(el.shadow){ctx.shadowColor='rgba(0,0,0,0.85)';ctx.shadowBlur=fs*0.15;ctx.shadowOffsetX=2;ctx.shadowOffsetY=2;}
   ctx.fillStyle=el.color;
   var lines=el.text.split('\n');
   var lh=fs*1.2;
@@ -1267,19 +1029,16 @@ function drawTextElement(ctx,el,cw,ch){
   ctx.restore();
 }
 
-// ============ DRAW STICKER ============
 function drawStickerElement(ctx,el,cw,ch){
   var fs=el.size*Math.min(cw,ch)/100;
   ctx.save();
   ctx.font=fs+'px serif';
-  ctx.textAlign='center';
-  ctx.textBaseline='middle';
+  ctx.textAlign='center';ctx.textBaseline='middle';
   ctx.translate(el.x*cw,el.y*ch);
   ctx.fillText(el.emoji,0,0);
   ctx.restore();
 }
 
-// ============ DRAW WATERMARK ============
 function drawWatermark(ctx,cw,ch){
   if(!watermark||!watermark.enabled)return;
   var pad=Math.min(cw,ch)*0.03;
@@ -1296,8 +1055,7 @@ function drawWatermark(ctx,cw,ch){
     ctx.fillStyle=watermark.color||'#fff';
     ctx.textBaseline=(pos==='tl'||pos==='tr')?'top':'bottom';
     ctx.textAlign=(pos==='tl'||pos==='bl')?'left':'right';
-    ctx.shadowColor='rgba(0,0,0,0.5)';
-    ctx.shadowBlur=6;
+    ctx.shadowColor='rgba(0,0,0,0.5)';ctx.shadowBlur=6;
     ctx.fillText(watermark.text,x,y);
   } else if(watermark.type==='image'&&watermark.img){
     var sz=(watermark.size||15)*Math.min(cw,ch)/100;
@@ -1311,14 +1069,12 @@ function drawWatermark(ctx,cw,ch){
   ctx.restore();
 }
 
-// ============ DRAW OVERLAYS ============
 function drawOverlays(ctx,cw,ch){
   textElements.forEach(function(el){drawTextElement(ctx,el,cw,ch);});
   stickers.forEach(function(el){drawStickerElement(ctx,el,cw,ch);});
   drawWatermark(ctx,cw,ch);
 }
 
-// ============ SCENE HELPERS ============
 function getSceneCount(){
   var l=LAYOUTS.find(function(x){return x.id===currentLayout;});
   if(!l)return images.length;
@@ -1337,7 +1093,6 @@ function getSceneDuration(si){
   return md;
 }
 
-// ============ ACTIVATE CANVAS FOR DRAG ============
 function activateCanvasForDrag(){
   if(images.length===0)return;
   var canvas=document.getElementById('previewCanvas');
@@ -1345,32 +1100,24 @@ function activateCanvasForDrag(){
     var sz=currentSize.split('x');
     var w=parseInt(sz[0]),h=parseInt(sz[1]);
     var ps=Math.min(400/w,400/h,1);
-    canvas.width=w*ps;
-    canvas.height=h*ps;
+    canvas.width=w*ps;canvas.height=h*ps;
     canvas.style.display='block';
     document.getElementById('previewEmpty').style.display='none';
     var ctx=canvas.getContext('2d');
     drawLayout(ctx,0,canvas.width,canvas.height,1,0.5);
     drawOverlays(ctx,canvas.width,canvas.height);
   }
-  setTimeout(function(){
-    if(window._renderDraggableZones)window._renderDraggableZones();
-  },100);
+  setTimeout(function(){if(window._renderDraggableZones)window._renderDraggableZones();},100);
 }
 
-// ============ PREVIEW VIDEO ============
 window.previewVideo=function(){
   if(images.length===0)return;
   var pc=document.getElementById('previewCard');
-  if(pc&&!isPreviewing){
-    setTimeout(function(){pc.scrollIntoView({behavior:'smooth',block:'start'});},100);
-  }
+  if(pc&&!isPreviewing){setTimeout(function(){pc.scrollIntoView({behavior:'smooth',block:'start'});},100);}
   if(isPreviewing){
     isPreviewing=false;
     if(previewAnimationId)cancelAnimationFrame(previewAnimationId);
-    images.forEach(function(it){
-      if(it.type==='video'&&it.media){try{it.media.pause();}catch(e){}}
-    });
+    images.forEach(function(it){if(it.type==='video'&&it.media){try{it.media.pause();}catch(e){}}});
     document.getElementById('previewBtn').textContent='▶ معاينة';
     return;
   }
@@ -1382,10 +1129,8 @@ window.previewVideo=function(){
   var sz=currentSize.split('x');
   var w=parseInt(sz[0]),h=parseInt(sz[1]);
   var ps=Math.min(400/w,400/h,1);
-  canvas.width=w*ps;
-  canvas.height=h*ps;
-  canvas.style.display='block';
-  ph.style.display='none';
+  canvas.width=w*ps;canvas.height=h*ps;
+  canvas.style.display='block';ph.style.display='none';
   var ctx=canvas.getContext('2d');
   var ts=getSceneCount(),cs=0,st=Date.now();
   var lastScene=-1;
@@ -1395,11 +1140,7 @@ window.previewVideo=function(){
     var l=LAYOUTS.find(function(x){return x.id===currentLayout;});
     var ip=l?l.cells.length:1;
     var si=sceneIdx*ip;
-    images.forEach(function(it){
-      if(it.type==='video'&&it.media){
-        try{it.media.pause();it.media.currentTime=0;}catch(e){}
-      }
-    });
+    images.forEach(function(it){if(it.type==='video'&&it.media){try{it.media.pause();it.media.currentTime=0;}catch(e){}}});
     for(var k=0;k<ip;k++){
       var idx=(si+k)%images.length;
       var it=images[idx];
@@ -1425,51 +1166,29 @@ window.previewVideo=function(){
     var ip=l?l.cells.length:1;
     var si=cs*ip;
     if(p>0.75&&currentTransition!=='none'&&cs<ts-1){
-      var tp=(p-0.75)/0.25;
-      var ns=(cs+1)*ip;
+      var tp=(p-0.75)/0.25;var ns=(cs+1)*ip;
       drawTransition(ctx,si,ns,canvas.width,canvas.height,tp);
     } else {
       drawLayout(ctx,si,canvas.width,canvas.height,1,p);
     }
     drawOverlays(ctx,canvas.width,canvas.height);
     if(p>=1){
-      cs++;
-      st=Date.now();
-      if(cs>=ts){
-        cs=0;
-        st=Date.now();
-        playSceneVideos(0);
-      } else {
-        playSceneVideos(cs);
-      }
+      cs++;st=Date.now();
+      if(cs>=ts){cs=0;st=Date.now();playSceneVideos(0);}
+      else{playSceneVideos(cs);}
     }
     previewAnimationId=requestAnimationFrame(animate);
   }
   animate();
 };
 
-// ============ RESET ALL ============
 window.resetAll=function(){
   if(!confirm('حذف كل شيء؟'))return;
-  images=[];
-  audioUpload=null;
-  musicFile=null;
-  recordedAudioBlob=null;
-  selectedAudio=null;
-  textElements=[];
-  stickers=[];
-  watermark=null;
-  isPreviewing=false;
-  selectedImageIndex=-1;
-  currentLayout='single';
-  currentProjectId=null;
+  images=[];audioUpload=null;musicFile=null;recordedAudioBlob=null;selectedAudio=null;
+  textElements=[];stickers=[];watermark=null;isPreviewing=false;selectedImageIndex=-1;
+  currentLayout='single';currentProjectId=null;
   if(previewAnimationId)cancelAnimationFrame(previewAnimationId);
-  renderImagesGrid();
-  renderLayouts();
-  updateButtons();
-  updateInfo();
-  updateAnimateTab();
-  renderElementsList();
+  renderImagesGrid();renderLayouts();updateButtons();updateInfo();updateAnimateTab();renderElementsList();
   document.getElementById('musicInfo').classList.add('section-hidden');
   document.getElementById('audioUploadInfo').classList.add('section-hidden');
   document.getElementById('recordPlayer').classList.remove('active');
@@ -1482,11 +1201,9 @@ window.resetAll=function(){
   document.getElementById('wmContent').classList.add('section-hidden');
   document.getElementById('wmOff').classList.add('active');
   document.getElementById('wmOn').classList.remove('active');
-  pushHistory();
-  showToast('تم إعادة التعيين');
+  pushHistory();showToast('تم إعادة التعيين');
 };
 
-// ============ CROP ============
 window.openCrop=function(){
   if(selectedImageIndex<0){showToast('اختر عنصراً أولاً');return;}
   var item=images[selectedImageIndex];
@@ -1513,8 +1230,7 @@ function initCropRect(canvas){
     var s=Math.min(canvas.width,canvas.height)*0.6;
     cropRect={x:(canvas.width-s)/2,y:(canvas.height-s)/2,w:s,h:s};
   }
-  renderCrop();
-  setupCropDrag(canvas);
+  renderCrop();setupCropDrag(canvas);
 }
 
 function renderCrop(){
@@ -1526,76 +1242,21 @@ function renderCrop(){
   ctx.fillRect(0,cropRect.y+cropRect.h,canvas.width,canvas.height);
   ctx.fillRect(0,cropRect.y,cropRect.x,cropRect.h);
   ctx.fillRect(cropRect.x+cropRect.w,cropRect.y,canvas.width-cropRect.x-cropRect.w,cropRect.h);
-  ctx.strokeStyle='#fff';
-  ctx.lineWidth=3;
+  ctx.strokeStyle='#fff';ctx.lineWidth=3;
   ctx.strokeRect(cropRect.x,cropRect.y,cropRect.w,cropRect.h);
 }
 
 function setupCropDrag(canvas){
   var isDragging=false,isResizing=false,rc=null,sx,sy,sr={};
-  function gp(e){
-    var r=canvas.getBoundingClientRect();
-    var cx=e.touches?e.touches[0].clientX:e.clientX;
-    var cy=e.touches?e.touches[0].clientY:e.clientY;
-    return{x:(cx-r.left)*(canvas.width/r.width),y:(cy-r.top)*(canvas.height/r.height)};
-  }
-  function fc(p){
-    var cs=['tl','tr','bl','br'];
-    var ps=[
-      {x:cropRect.x,y:cropRect.y},
-      {x:cropRect.x+cropRect.w,y:cropRect.y},
-      {x:cropRect.x,y:cropRect.y+cropRect.h},
-      {x:cropRect.x+cropRect.w,y:cropRect.y+cropRect.h}
-    ];
-    for(var i=0;i<ps.length;i++){
-      var d=Math.sqrt(Math.pow(p.x-ps[i].x,2)+Math.pow(p.y-ps[i].y,2));
-      if(d<25)return cs[i];
-    }
-    return null;
-  }
-  function start(e){
-    e.preventDefault();
-    var p=gp(e);
-    var c=fc(p);
-    if(c){isResizing=true;rc=c;}
-    else if(p.x>=cropRect.x&&p.x<=cropRect.x+cropRect.w&&p.y>=cropRect.y&&p.y<=cropRect.y+cropRect.h){isDragging=true;}
-    else return;
-    sx=p.x;
-    sy=p.y;
-    sr={x:cropRect.x,y:cropRect.y,w:cropRect.w,h:cropRect.h};
-  }
-  function move(e){
-    if(!isDragging&&!isResizing)return;
-    e.preventDefault();
-    var p=gp(e);
-    var dx=p.x-sx,dy=p.y-sy;
-    if(isDragging){
-      cropRect.x=Math.max(0,Math.min(canvas.width-cropRect.w,sr.x+dx));
-      cropRect.y=Math.max(0,Math.min(canvas.height-cropRect.h,sr.y+dy));
-    } else if(isResizing){
-      if(rc==='br'){
-        cropRect.w=Math.max(30,Math.min(canvas.width-cropRect.x,sr.w+dx));
-        cropRect.h=Math.max(30,Math.min(canvas.height-cropRect.y,sr.h+dy));
-      }
-    }
-    renderCrop();
-  }
+  function gp(e){var r=canvas.getBoundingClientRect();var cx=e.touches?e.touches[0].clientX:e.clientX;var cy=e.touches?e.touches[0].clientY:e.clientY;return{x:(cx-r.left)*(canvas.width/r.width),y:(cy-r.top)*(canvas.height/r.height)};}
+  function fc(p){var cs=['tl','tr','bl','br'];var ps=[{x:cropRect.x,y:cropRect.y},{x:cropRect.x+cropRect.w,y:cropRect.y},{x:cropRect.x,y:cropRect.y+cropRect.h},{x:cropRect.x+cropRect.w,y:cropRect.y+cropRect.h}];for(var i=0;i<ps.length;i++){var d=Math.sqrt(Math.pow(p.x-ps[i].x,2)+Math.pow(p.y-ps[i].y,2));if(d<25)return cs[i];}return null;}
+  function start(e){e.preventDefault();var p=gp(e);var c=fc(p);if(c){isResizing=true;rc=c;}else if(p.x>=cropRect.x&&p.x<=cropRect.x+cropRect.w&&p.y>=cropRect.y&&p.y<=cropRect.y+cropRect.h){isDragging=true;}else return;sx=p.x;sy=p.y;sr={x:cropRect.x,y:cropRect.y,w:cropRect.w,h:cropRect.h};}
+  function move(e){if(!isDragging&&!isResizing)return;e.preventDefault();var p=gp(e);var dx=p.x-sx,dy=p.y-sy;if(isDragging){cropRect.x=Math.max(0,Math.min(canvas.width-cropRect.w,sr.x+dx));cropRect.y=Math.max(0,Math.min(canvas.height-cropRect.h,sr.y+dy));}else if(isResizing){if(rc==='br'){cropRect.w=Math.max(30,Math.min(canvas.width-cropRect.x,sr.w+dx));cropRect.h=Math.max(30,Math.min(canvas.height-cropRect.y,sr.h+dy));}}renderCrop();}
   function end(){isDragging=false;isResizing=false;rc=null;}
   if(canvas._cc)canvas._cc();
-  canvas.addEventListener('mousedown',start);
-  canvas.addEventListener('mousemove',move);
-  canvas.addEventListener('mouseup',end);
-  canvas.addEventListener('touchstart',start,{passive:false});
-  canvas.addEventListener('touchmove',move,{passive:false});
-  canvas.addEventListener('touchend',end);
-  canvas._cc=function(){
-    canvas.removeEventListener('mousedown',start);
-    canvas.removeEventListener('mousemove',move);
-    canvas.removeEventListener('mouseup',end);
-    canvas.removeEventListener('touchstart',start);
-    canvas.removeEventListener('touchmove',move);
-    canvas.removeEventListener('touchend',end);
-  };
+  canvas.addEventListener('mousedown',start);canvas.addEventListener('mousemove',move);canvas.addEventListener('mouseup',end);
+  canvas.addEventListener('touchstart',start,{passive:false});canvas.addEventListener('touchmove',move,{passive:false});canvas.addEventListener('touchend',end);
+  canvas._cc=function(){canvas.removeEventListener('mousedown',start);canvas.removeEventListener('mousemove',move);canvas.removeEventListener('mouseup',end);canvas.removeEventListener('touchstart',start);canvas.removeEventListener('touchmove',move);canvas.removeEventListener('touchend',end);};
 }
 
 window.applyCrop=function(){
@@ -1603,19 +1264,13 @@ window.applyCrop=function(){
   var item=images[selectedImageIndex],orig=item.originalImg;
   var rx=cropRect.x/cropScale,ry=cropRect.y/cropScale,rw=cropRect.w/cropScale,rh=cropRect.h/cropScale;
   var tc=document.createElement('canvas');
-  tc.width=rw;
-  tc.height=rh;
+  tc.width=rw;tc.height=rh;
   var tctx=tc.getContext('2d');
   tctx.drawImage(orig,rx,ry,rw,rh,0,0,rw,rh);
   var ni=new Image();
   ni.onload=function(){
-    item.img=ni;
-    item.media=ni;
-    item.crop={x:rx,y:ry,w:rw,h:rh};
-    renderImagesGrid();
-    updateInfo();
-    closeCrop();
-    pushHistory();
+    item.img=ni;item.media=ni;item.crop={x:rx,y:ry,w:rw,h:rh};
+    renderImagesGrid();updateInfo();closeCrop();pushHistory();
     showToast('تم قص الصورة');
   };
   ni.src=tc.toDataURL('image/jpeg',0.95);
@@ -1623,11 +1278,9 @@ window.applyCrop=function(){
 
 window.closeCrop=function(){
   document.getElementById('cropOverlay').classList.remove('active');
-  cropRect=null;
-  cropOriginalImage=null;
+  cropRect=null;cropOriginalImage=null;
 };
 
-// ============ POSITION GRID ============
 function renderPositionGrid(gridId,currentVar,onSelect){
   var grid=document.getElementById(gridId);
   if(!grid)return;
@@ -1641,66 +1294,30 @@ function renderPositionGrid(gridId,currentVar,onSelect){
   });
 }
 
-renderPositionGrid('textPositionGrid','mc',function(k){
-  currentTextPosition=k;
-  renderPositionGrid('textPositionGrid',k,arguments.callee);
-});
-renderPositionGrid('stickerPositionGrid','mc',function(k){
-  currentStickerPosition=k;
-  renderPositionGrid('stickerPositionGrid',k,arguments.callee);
-});
+renderPositionGrid('textPositionGrid','mc',function(k){currentTextPosition=k;renderPositionGrid('textPositionGrid',k,arguments.callee);});
+renderPositionGrid('stickerPositionGrid','mc',function(k){currentStickerPosition=k;renderPositionGrid('stickerPositionGrid',k,arguments.callee);});
 
-// ============ EMOJI GRID ============
-(function(){
-  var g=document.getElementById('emojiGrid');
-  EMOJIS.forEach(function(e){
-    var b=document.createElement('button');
-    b.className='emoji-btn';
-    b.textContent=e;
-    b.onclick=function(){addSticker(e);};
-    g.appendChild(b);
-  });
-})();
+(function(){var g=document.getElementById('emojiGrid');EMOJIS.forEach(function(e){var b=document.createElement('button');b.className='emoji-btn';b.textContent=e;b.onclick=function(){addSticker(e);};g.appendChild(b);});})();
 
-document.getElementById('textSize').addEventListener('input',function(){
-  document.getElementById('textSizeLabel').textContent=this.value;
-});
+document.getElementById('textSize').addEventListener('input',function(){document.getElementById('textSizeLabel').textContent=this.value;});
 
-// ============ ADD TEXT ============
 window.addTextElement=function(){
   var txt=document.getElementById('textContent').value.trim();
   if(!txt){showToast('اكتب نصاً أولاً');return;}
   var pos=POSITIONS[currentTextPosition];
-  textElements.push({
-    id:'t'+Date.now(),
-    text:txt,
-    x:pos.x,y:pos.y,
-    size:parseInt(document.getElementById('textSize').value),
-    color:document.getElementById('textColor').value,
-    font:document.getElementById('textFont').value,
-    shadow:document.getElementById('textShadow').checked,
-    rotation:0
-  });
+  textElements.push({id:'t'+Date.now(),text:txt,x:pos.x,y:pos.y,size:parseInt(document.getElementById('textSize').value),color:document.getElementById('textColor').value,font:document.getElementById('textFont').value,shadow:document.getElementById('textShadow').checked,rotation:0});
   document.getElementById('textContent').value='';
-  renderElementsList();
-  updateInfo();
-  pushHistory();
-  activateCanvasForDrag();
+  renderElementsList();updateInfo();pushHistory();activateCanvasForDrag();
   showToast('تم إضافة النص ✋ اسحبه بالمعاينة');
 };
 
-// ============ ADD STICKER ============
 function addSticker(emoji){
   var pos=POSITIONS[currentStickerPosition];
   stickers.push({id:'s'+Date.now(),emoji:emoji,x:pos.x,y:pos.y,size:15,rotation:0});
-  renderElementsList();
-  updateInfo();
-  pushHistory();
-  activateCanvasForDrag();
+  renderElementsList();updateInfo();pushHistory();activateCanvasForDrag();
   showToast('تم إضافة الملصق ✋ اسحبه بالمعاينة');
 }
 
-// ============ ELEMENTS LIST ============
 function renderElementsList(){
   var list=document.getElementById('elementList');
   var empty=document.getElementById('elementsEmpty');
@@ -1711,51 +1328,29 @@ function renderElementsList(){
   if(all.length===0){empty.style.display='block';return;}
   empty.style.display='none';
   all.forEach(function(item){
-    var el=document.createElement('div');
-    el.className='element-item';
-    var head=document.createElement('div');
-    head.className='element-item-head';
-    var pv=document.createElement('div');
-    pv.className='element-item-preview';
+    var el=document.createElement('div');el.className='element-item';
+    var head=document.createElement('div');head.className='element-item-head';
+    var pv=document.createElement('div');pv.className='element-item-preview';
     if(item.type==='text')pv.textContent='📝 '+item.data.text;
     else pv.textContent=item.data.emoji+' ملصق';
     var acts=document.createElement('div');
     var delBtn=document.createElement('button');
-    delBtn.className='el-del';
-    delBtn.textContent='حذف';
+    delBtn.className='el-del';delBtn.textContent='حذف';
     delBtn.onclick=function(){
       if(item.type==='text')textElements=textElements.filter(function(x){return x.id!==item.data.id;});
       else stickers=stickers.filter(function(x){return x.id!==item.data.id;});
-      renderElementsList();
-      updateInfo();
-      pushHistory();
-      activateCanvasForDrag();
+      renderElementsList();updateInfo();pushHistory();activateCanvasForDrag();
     };
-    acts.appendChild(delBtn);
-    head.appendChild(pv);
-    head.appendChild(acts);
-    el.appendChild(head);
+    acts.appendChild(delBtn);head.appendChild(pv);head.appendChild(acts);el.appendChild(head);
     list.appendChild(el);
   });
 }
 renderElementsList();
 
-// ============ WATERMARK ============
 window.toggleWatermark=function(on){
-  if(on){
-    if(!watermark)watermark={enabled:true,type:'text',text:'@mybrand',color:'#ffffff',size:5,position:'br',opacity:0.7};
-    watermark.enabled=true;
-    document.getElementById('wmOn').classList.add('active');
-    document.getElementById('wmOff').classList.remove('active');
-    document.getElementById('wmContent').classList.remove('section-hidden');
-  } else {
-    if(watermark)watermark.enabled=false;
-    document.getElementById('wmOff').classList.add('active');
-    document.getElementById('wmOn').classList.remove('active');
-    document.getElementById('wmContent').classList.add('section-hidden');
-  }
-  updateInfo();
-  pushHistory();
+  if(on){if(!watermark)watermark={enabled:true,type:'text',text:'@mybrand',color:'#ffffff',size:5,position:'br',opacity:0.7};watermark.enabled=true;document.getElementById('wmOn').classList.add('active');document.getElementById('wmOff').classList.remove('active');document.getElementById('wmContent').classList.remove('section-hidden');}
+  else{if(watermark)watermark.enabled=false;document.getElementById('wmOff').classList.add('active');document.getElementById('wmOn').classList.remove('active');document.getElementById('wmContent').classList.add('section-hidden');}
+  updateInfo();pushHistory();
 };
 
 window.setWmType=function(t){
@@ -1775,26 +1370,20 @@ window.setWmPos=function(pos,btn){
 };
 
 document.getElementById('wmImageInput').addEventListener('change',function(e){
-  var file=e.target.files[0];
-  if(!file)return;
+  var file=e.target.files[0];if(!file)return;
   var reader=new FileReader();
   reader.onload=function(ev){
     var img=new Image();
     img.onload=function(){
       if(!watermark)watermark={enabled:true,type:'image',position:'br',opacity:0.7,size:15};
-      watermark.img=img;
-      watermark.type='image';
-      window._wmImgCache=img;
+      watermark.img=img;watermark.type='image';window._wmImgCache=img;
       document.getElementById('wmPreviewInfo').classList.remove('section-hidden');
-      setWmType('image');
-      updateInfo();
-      pushHistory();
+      setWmType('image');updateInfo();pushHistory();
       showToast('تم رفع الشعار');
     };
     img.src=ev.target.result;
   };
-  reader.readAsDataURL(file);
-  e.target.value='';
+  reader.readAsDataURL(file);e.target.value='';
 });
 
 window.removeWmImage=function(){
@@ -1815,7 +1404,6 @@ window.removeWmImage=function(){
   });
 });
 
-// ============ TEMPLATES RENDER ============
 (function(){
   var catsBar=document.getElementById('templateCategories');
   catsBar.innerHTML='';
@@ -1826,8 +1414,7 @@ window.removeWmImage=function(){
     btn.onclick=function(){
       currentTemplateCategory=cat.id;
       catsBar.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');});
-      btn.classList.add('active');
-      renderTemplates();
+      btn.classList.add('active');renderTemplates();
     };
     catsBar.appendChild(btn);
   });
@@ -1847,65 +1434,38 @@ function renderTemplates(){
   });
 }
 
-// ============ APPLY TEMPLATE ============
 function applyTemplate(t){
-  currentSize=t.size;
-  currentTransition=t.transition;
-  currentLayout=t.layout;
+  currentSize=t.size;currentTransition=t.transition;currentLayout=t.layout;
   images.forEach(function(img){img.animation=t.animation;});
   if(t.bg){
-    backgroundMode='color';
-    backgroundCustomColor=t.bg;
-    document.querySelectorAll('#bgModeOptions .opt-btn').forEach(function(b){
-      b.classList.toggle('active',b.dataset.bgmode==='color');
-    });
-    var bgColorInput=document.getElementById('bgCustomColor');
-    if(bgColorInput)bgColorInput.value=t.bg;
+    backgroundMode='color';backgroundCustomColor=t.bg;
+    document.querySelectorAll('#bgModeOptions .opt-btn').forEach(function(b){b.classList.toggle('active',b.dataset.bgmode==='color');});
+    var bgColorInput=document.getElementById('bgCustomColor');if(bgColorInput)bgColorInput.value=t.bg;
   }
-  document.querySelectorAll('#sizeOptions .opt-btn').forEach(function(b){
-    b.classList.toggle('active',b.dataset.size===currentSize);
-  });
-  document.querySelectorAll('#transitionOptions .opt-btn').forEach(function(b){
-    b.classList.toggle('active',b.dataset.transition===currentTransition);
-  });
-  stickers=[];
-  textElements=[];
+  document.querySelectorAll('#sizeOptions .opt-btn').forEach(function(b){b.classList.toggle('active',b.dataset.size===currentSize);});
+  document.querySelectorAll('#transitionOptions .opt-btn').forEach(function(b){b.classList.toggle('active',b.dataset.transition===currentTransition);});
+  stickers=[];textElements=[];
   if(t.sticker){
     var sp=POSITIONS[t.stickerPos||'tc']||POSITIONS['tc'];
     stickers.push({id:'s'+Date.now(),emoji:t.sticker,x:sp.x,y:sp.y,size:18,rotation:0});
   }
   if(t.text){
     var tp=POSITIONS['mc'];
-    textElements.push({
-      id:'t'+Date.now(),text:t.text,x:tp.x,y:tp.y,
-      size:10,color:t.textColor||'#ffffff',font:"'Cairo',sans-serif",
-      shadow:true,rotation:0
-    });
-    var txtArea=document.getElementById('textContent');
-    if(txtArea)txtArea.value=t.text;
-    var colorInput=document.getElementById('textColor');
-    if(colorInput&&t.textColor)colorInput.value=t.textColor;
+    textElements.push({id:'t'+Date.now(),text:t.text,x:tp.x,y:tp.y,size:10,color:t.textColor||'#ffffff',font:"'Cairo',sans-serif",shadow:true,rotation:0});
+    var txtArea=document.getElementById('textContent');if(txtArea)txtArea.value=t.text;
+    var colorInput=document.getElementById('textColor');if(colorInput&&t.textColor)colorInput.value=t.textColor;
   }
-  renderImagesGrid();
-  renderLayouts();
-  renderElementsList();
-  updateInfo();
-  pushHistory();
-  activateCanvasForDrag();
+  renderImagesGrid();renderLayouts();renderElementsList();updateInfo();pushHistory();activateCanvasForDrag();
   showToast('تم تطبيق قالب: '+t.name);
 }
 
-// ============ AUDIO TABS ============
 window.switchAudioTab=function(tab,btn){
   document.querySelectorAll('.audio-tab').forEach(function(b){b.classList.remove('active');});
   btn.classList.add('active');
-  document.querySelectorAll('#audioTab-record,#audioTab-upload,#audioTab-music').forEach(function(el){
-    el.classList.add('section-hidden');
-  });
+  document.querySelectorAll('#audioTab-record,#audioTab-upload,#audioTab-music').forEach(function(el){el.classList.add('section-hidden');});
   document.getElementById('audioTab-'+tab).classList.remove('section-hidden');
 };
 
-// ============ RECORDING ============
 window.toggleRecording=function(){
   if(mediaRecorder&&mediaRecorder.state==='recording')stopRecording();
   else startRecording();
@@ -1938,10 +1498,7 @@ function startRecording(){
     document.getElementById('recordBtn').classList.remove('record');
     document.getElementById('recordBtn').classList.add('stop');
     recordingTimerInterval=setInterval(updateTimer,100);
-  }).catch(function(err){
-    console.error(err);
-    showToast('لم يتم السماح للميكروفون');
-  });
+  }).catch(function(err){console.error(err);showToast('لم يتم السماح للميكروفون');});
 }
 
 function stopRecording(){
@@ -1960,58 +1517,41 @@ function updateTimer(){
   document.getElementById('recorderTimer').textContent=m+':'+s;
 }
 
-window.useRecording=function(){
-  if(!recordedAudioBlob)return;
-  selectedAudio='record';
-  updateInfo();
-  showToast('سيتم استخدام التسجيل');
-};
+window.useRecording=function(){if(!recordedAudioBlob)return;selectedAudio='record';updateInfo();showToast('سيتم استخدام التسجيل');};
 
 window.deleteRecording=function(){
-  recordedAudioBlob=null;
-  selectedAudio=null;
+  recordedAudioBlob=null;selectedAudio=null;
   document.getElementById('recordPlayer').classList.remove('active');
   document.getElementById('recordActions').classList.add('section-hidden');
   document.getElementById('recorderStatus').textContent='جاهز للتسجيل';
   document.getElementById('recorderTimer').textContent='00:00';
   document.getElementById('recordAudio').src='';
-  updateInfo();
-  showToast('تم حذف التسجيل');
+  updateInfo();showToast('تم حذف التسجيل');
 };
 
-// ============ AUDIO UPLOAD ============
 document.getElementById('audioInput').addEventListener('change',function(e){
-  var f=e.target.files[0];
-  if(!f)return;
+  var f=e.target.files[0];if(!f)return;
   if(!f.type.startsWith('audio/')){showToast('الرجاء اختيار ملف صوتي');return;}
-  audioUpload=f;
-  selectedAudio='upload';
+  audioUpload=f;selectedAudio='upload';
   document.getElementById('audioUploadName').textContent=f.name;
   document.getElementById('audioUploadInfo').classList.remove('section-hidden');
-  updateInfo();
-  showToast('تم رفع الملف');
-  e.target.value='';
+  updateInfo();showToast('تم رفع الملف');e.target.value='';
 });
 
 window.removeAudioUpload=function(){
-  audioUpload=null;
-  if(selectedAudio==='upload')selectedAudio=null;
+  audioUpload=null;if(selectedAudio==='upload')selectedAudio=null;
   document.getElementById('audioUploadInfo').classList.add('section-hidden');
   document.getElementById('audioInput').value='';
   updateInfo();
 };
 
-// ============ MUSIC ============
 document.getElementById('musicInput').addEventListener('change',function(e){
-  var f=e.target.files[0];
-  if(!f)return;
+  var f=e.target.files[0];if(!f)return;
   if(!f.type.startsWith('audio/')){showToast('الرجاء اختيار ملف صوتي');return;}
   musicFile=f;
   document.getElementById('musicName').textContent=f.name;
   document.getElementById('musicInfo').classList.remove('section-hidden');
-  updateInfo();
-  showToast('تم رفع الموسيقى');
-  e.target.value='';
+  updateInfo();showToast('تم رفع الموسيقى');e.target.value='';
 });
 
 window.removeMusic=function(){
@@ -2021,7 +1561,6 @@ window.removeMusic=function(){
   updateInfo();
 };
 
-// ============ EXPORT VIDEO ============
 window.exportVideo=function(){
   if(images.length===0||isExporting)return;
   isExporting=true;
@@ -2030,19 +1569,13 @@ window.exportVideo=function(){
   var pt=document.getElementById('progressText');
   var eb=document.getElementById('exportBtn');
   var pb=document.getElementById('previewBtn');
-  pc.classList.add('active');
-  eb.disabled=true;
-  pb.disabled=true;
-  isPreviewing=false;
+  pc.classList.add('active');eb.disabled=true;pb.disabled=true;isPreviewing=false;
   trackEvent('montage-تصدير');
   var sz=currentSize.split('x'),w=parseInt(sz[0]),h=parseInt(sz[1]);
   var selectedBitrate=BITRATE_MAP[exportQuality]||8000000;
-  var ec=document.createElement('canvas');
-  ec.width=w;
-  ec.height=h;
+  var ec=document.createElement('canvas');ec.width=w;ec.height=h;
   var ctx=ec.getContext('2d');
-  ctx.imageSmoothingEnabled=true;
-  ctx.imageSmoothingQuality='high';
+  ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
   var stream=ec.captureStream(30);
   var ac=null,as=[],aft=null;
   if(selectedAudio==='record'&&recordedAudioBlob)aft=recordedAudioBlob;
@@ -2054,33 +1587,13 @@ window.exportVideo=function(){
       ac=new (window.AudioContext||window.webkitAudioContext)();
       var ad=ac.createMediaStreamDestination();
       var ps=[];
-      if(aft){
-        ps.push(aft.arrayBuffer().then(function(b){return ac.decodeAudioData(b);}).then(function(ab){
-          var s=ac.createBufferSource();
-          s.buffer=ab;
-          s.loop=false;
-          s.connect(ad);
-          as.push(s);
-        }));
-      }
-      if(musicFile){
-        ps.push(musicFile.arrayBuffer().then(function(b){return ac.decodeAudioData(b);}).then(function(md){
-          var ms=ac.createBufferSource();
-          ms.buffer=md;
-          ms.loop=true;
-          var g=ac.createGain();
-          g.gain.value=aft?0.15:0.6;
-          ms.connect(g);
-          g.connect(ad);
-          as.push(ms);
-        }));
-      }
+      if(aft){ps.push(aft.arrayBuffer().then(function(b){return ac.decodeAudioData(b);}).then(function(ab){var s=ac.createBufferSource();s.buffer=ab;s.loop=false;s.connect(ad);as.push(s);}));}
+      if(musicFile){ps.push(musicFile.arrayBuffer().then(function(b){return ac.decodeAudioData(b);}).then(function(md){var ms=ac.createBufferSource();ms.buffer=md;ms.loop=true;var g=ac.createGain();g.gain.value=aft?0.15:0.6;ms.connect(g);g.connect(ad);as.push(ms);}));}
       return Promise.all(ps).then(function(){
         images.forEach(function(it){
           if(it.type==='video'&&it.media){
             try{
-              it.media.muted=false;
-              it.media.volume=1;
+              it.media.muted=false;it.media.volume=1;
               if(!it._audioSource){it._audioSource=ac.createMediaElementSource(it.media);}
               try{it._audioSource.disconnect();}catch(e){}
               it._audioSource.connect(ad);
@@ -2114,21 +1627,11 @@ window.exportVideo=function(){
       link.style.display='none';
       document.body.appendChild(link);
       link.click();
-      setTimeout(function(){
-        if(link.parentNode)document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-      },30000);
-      images.forEach(function(it){
-        if(it.type==='video'&&it.media){
-          try{it.media.pause();it.media.muted=true;it.media.playbackRate=1;}catch(e){}
-        }
-      });
+      setTimeout(function(){if(link.parentNode)document.body.removeChild(link);URL.revokeObjectURL(url);},30000);
+      images.forEach(function(it){if(it.type==='video'&&it.media){try{it.media.pause();it.media.muted=true;it.media.playbackRate=1;}catch(e){}}});
       as.forEach(function(s){try{s.stop();}catch(e){}});
       if(ac)ac.close();
-      pc.classList.remove('active');
-      eb.disabled=false;
-      pb.disabled=false;
-      isExporting=false;
+      pc.classList.remove('active');eb.disabled=false;pb.disabled=false;isExporting=false;
       document.getElementById('shareRow').classList.remove('section-hidden');
       showToast('✅ تم التصدير — الفيديو في مجلد التنزيلات');
     };
@@ -2144,11 +1647,7 @@ window.exportVideo=function(){
       if(lastExpScene===sceneIdx)return;
       lastExpScene=sceneIdx;
       var si=sceneIdx*ip;
-      images.forEach(function(it){
-        if(it.type==='video'&&it.media){
-          try{it.media.pause();it.media.currentTime=0;}catch(e){}
-        }
-      });
+      images.forEach(function(it){if(it.type==='video'&&it.media){try{it.media.pause();it.media.currentTime=0;}catch(e){}}});
       for(var k=0;k<ip;k++){
         var idx=(si+k)%images.length;
         var it=images[idx];
@@ -2170,26 +1669,13 @@ window.exportVideo=function(){
       var el=(now-fst)/1000,p=el/d;
       ctx.clearRect(0,0,w,h);
       var si=cs*ip;
-      if(p>0.75&&currentTransition!=='none'&&cs<ts-1){
-        var tp=(p-0.75)/0.25;
-        var ns=(cs+1)*ip;
-        drawTransition(ctx,si,ns,w,h,tp);
-      } else {
-        drawLayout(ctx,si,w,h,1,p);
-      }
+      if(p>0.75&&currentTransition!=='none'&&cs<ts-1){var tp=(p-0.75)/0.25;var ns=(cs+1)*ip;drawTransition(ctx,si,ns,w,h,tp);}
+      else{drawLayout(ctx,si,w,h,1,p);}
       drawOverlays(ctx,w,h);
       if(p>=1){
-        cs++;
-        fst=now;
-        if(cs>=ts){
-          images.forEach(function(it){
-            if(it.type==='video'&&it.media){try{it.media.pause();}catch(e){}}
-          });
-          rec.stop();
-          return;
-        } else {
-          playSceneVideosForExport(cs);
-        }
+        cs++;fst=now;
+        if(cs>=ts){images.forEach(function(it){if(it.type==='video'&&it.media){try{it.media.pause();}catch(e){}}});rec.stop();return;}
+        else{playSceneVideosForExport(cs);}
       }
       var tpr=(cs+p)/ts;
       pf.style.width=(tpr*100)+'%';
@@ -2197,103 +1683,61 @@ window.exportVideo=function(){
       requestAnimationFrame(rf);
     }
     rf();
-  }).catch(function(err){
-    console.error('خطأ:',err);
-    showToast('حدث خطأ');
-    pc.classList.remove('active');
-    eb.disabled=false;
-    pb.disabled=false;
-    isExporting=false;
-  });
+  }).catch(function(err){console.error('خطأ:',err);showToast('حدث خطأ');pc.classList.remove('active');eb.disabled=false;pb.disabled=false;isExporting=false;});
 };
 
-// ============ SHARE ============
 function getShareText(){return 'شاهد الفيديو الذي أنشأته من موقع ريشة 🎬';}
 function getShareUrl(){return window.location.origin+window.location.pathname;}
 
-window.shareWhatsApp=function(){
-  window.open('https://wa.me/?text='+encodeURIComponent(getShareText()+' '+getShareUrl()),'_blank');
-};
-window.shareTwitter=function(){
-  window.open('https://twitter.com/intent/tweet?text='+encodeURIComponent(getShareText())+'&url='+encodeURIComponent(getShareUrl()),'_blank');
-};
-window.shareTelegram=function(){
-  window.open('https://t.me/share/url?url='+encodeURIComponent(getShareUrl())+'&text='+encodeURIComponent(getShareText()),'_blank');
-};
+window.shareWhatsApp=function(){window.open('https://wa.me/?text='+encodeURIComponent(getShareText()+' '+getShareUrl()),'_blank');};
+window.shareTwitter=function(){window.open('https://twitter.com/intent/tweet?text='+encodeURIComponent(getShareText())+'&url='+encodeURIComponent(getShareUrl()),'_blank');};
+window.shareTelegram=function(){window.open('https://t.me/share/url?url='+encodeURIComponent(getShareUrl())+'&text='+encodeURIComponent(getShareText()),'_blank');};
 window.copyShareLink=function(){
   var url=getShareUrl();
   if(navigator.clipboard&&navigator.clipboard.writeText){
     navigator.clipboard.writeText(url).then(function(){showToast('✅ تم نسخ الرابط');}).catch(function(){showToast('تعذّر النسخ');});
   } else {
-    var ta=document.createElement('textarea');
-    ta.value=url;
-    document.body.appendChild(ta);
-    ta.select();
-    try{document.execCommand('copy');showToast('✅ تم نسخ الرابط');}
-    catch(e){showToast('تعذّر النسخ');}
+    var ta=document.createElement('textarea');ta.value=url;document.body.appendChild(ta);ta.select();
+    try{document.execCommand('copy');showToast('✅ تم نسخ الرابط');}catch(e){showToast('تعذّر النسخ');}
     document.body.removeChild(ta);
   }
 };
 
-// ============ UPLOAD TO STORAGE ============
 async function uploadFileToStorage(fileOrBlob,prefix){
   if(!fileOrBlob)return null;
   var ext='webm';
-  if(fileOrBlob.name){
-    var parts=fileOrBlob.name.split('.');
-    if(parts.length>1)ext=parts[parts.length-1];
-  } else if(fileOrBlob.type){
+  if(fileOrBlob.name){var parts=fileOrBlob.name.split('.');if(parts.length>1)ext=parts[parts.length-1];}
+  else if(fileOrBlob.type){
     if(fileOrBlob.type.indexOf('mp4')>-1)ext='mp4';
     else if(fileOrBlob.type.indexOf('webm')>-1)ext='webm';
-    else {
-      var m=fileOrBlob.type.match(/\/([a-z0-9]+)/i);
-      if(m&&m[1])ext=m[1];
-    }
+    else{var m=fileOrBlob.type.match(/\/([a-z0-9]+)/i);if(m&&m[1])ext=m[1];}
   }
   var fn=currentUser.id+'/'+prefix+'-'+Date.now()+'.'+ext;
-  var r=await sb.storage.from('audio').upload(fn,fileOrBlob,{
-    contentType:fileOrBlob.type||'application/octet-stream',
-    upsert:false
-  });
+  var r=await sb.storage.from('audio').upload(fn,fileOrBlob,{contentType:fileOrBlob.type||'application/octet-stream',upsert:false});
   if(r.error)throw r.error;
   return sb.storage.from('audio').getPublicUrl(fn).data.publicUrl;
 }
 
-// ============ PROJECT DATA ============
 function getProjectData(){
   return{
     images:images.map(function(i){
       return{
-        src:i.src,type:i.type||'image',animation:i.animation,duration:i.duration,
+        src:i.src,type:i.type||'image',animation:i.animation,
+        duration:i.duration,originalDuration:i.originalDuration,
         rotation:i.rotation,flipH:i.flipH,flipV:i.flipV,speed:i.speed,
         crop:i.crop,trim:i.trim,filter:i.filter
       };
     }),
-    currentSize:currentSize,
-    currentTransition:currentTransition,
-    currentLayout:currentLayout,
-    selectedAudio:selectedAudio,
-    hasRecordedAudio:!!recordedAudioBlob,
-    hasAudioUpload:!!audioUpload,
-    hasMusic:!!musicFile,
-    textElements:textElements.map(function(t){
-      return{id:t.id,text:t.text,x:t.x,y:t.y,size:t.size,color:t.color,font:t.font,shadow:t.shadow,rotation:t.rotation};
-    }),
-    stickers:stickers.map(function(s){
-      return{id:s.id,emoji:s.emoji,x:s.x,y:s.y,size:s.size,rotation:s.rotation};
-    }),
-    watermark:watermark?{
-      enabled:watermark.enabled,type:watermark.type,text:watermark.text,
-      color:watermark.color,size:watermark.size,position:watermark.position,
-      opacity:watermark.opacity,hasImage:!!watermark.img
-    }:null,
-    backgroundMode:backgroundMode,
-    backgroundCustomColor:backgroundCustomColor,
-    exportQuality:exportQuality
+    currentSize:currentSize,currentTransition:currentTransition,currentLayout:currentLayout,
+    selectedAudio:selectedAudio,hasRecordedAudio:!!recordedAudioBlob,
+    hasAudioUpload:!!audioUpload,hasMusic:!!musicFile,
+    textElements:textElements.map(function(t){return{id:t.id,text:t.text,x:t.x,y:t.y,size:t.size,color:t.color,font:t.font,shadow:t.shadow,rotation:t.rotation};}),
+    stickers:stickers.map(function(s){return{id:s.id,emoji:s.emoji,x:s.x,y:s.y,size:s.size,rotation:s.rotation};}),
+    watermark:watermark?{enabled:watermark.enabled,type:watermark.type,text:watermark.text,color:watermark.color,size:watermark.size,position:watermark.position,opacity:watermark.opacity,hasImage:!!watermark.img}:null,
+    backgroundMode:backgroundMode,backgroundCustomColor:backgroundCustomColor,exportQuality:exportQuality
   };
 }
 
-// ============ SAVE PROJECT ============
 async function saveProject(){
   if(!currentUser){showToast('سجّل دخول أولاً');return;}
   if(images.length===0){showToast('أضف وسائط أولاً');return;}
@@ -2302,8 +1746,7 @@ async function saveProject(){
   var category=prompt('التصنيف (عام / ريلز / ستوري / منشور / إعلان / مناسبات):','عام');
   if(!category)category='عام';
   var btn=document.getElementById('saveProjectBtn');
-  btn.disabled=true;
-  btn.textContent='⏳';
+  btn.disabled=true;btn.textContent='⏳';
   showLoading('جاري رفع الملفات...');
   try{
     var audioUrls={};
@@ -2325,24 +1768,17 @@ async function saveProject(){
     if(watermark&&watermark.type==='image'&&watermark.img){
       showLoading('جاري رفع الشعار...');
       try{
-        var blob=await new Promise(function(res){
-          watermark.img.toBlob(function(b){res(b);},'image/png');
-        });
+        var blob=await new Promise(function(res){watermark.img.toBlob(function(b){res(b);},'image/png');});
         if(blob)wmImgUrl=await uploadFileToStorage(blob,'wm');
       } catch(e){console.error(e);}
     }
     document.getElementById('loadingText').textContent='جاري حفظ المشروع...';
     var data=getProjectData();
-    data.audioUrls=audioUrls;
-    data.videoUrls=videoUrls;
+    data.audioUrls=audioUrls;data.videoUrls=videoUrls;
     if(wmImgUrl)data.watermark.imageUrl=wmImgUrl;
     var thumbnail=(images[0]&&images[0].type!=='video')?images[0].src:null;
     var r=await sb.from('projects').insert({
-      user_id:currentUser.id,
-      name:name,
-      data:data,
-      thumbnail:thumbnail,
-      category:category
+      user_id:currentUser.id,name:name,data:data,thumbnail:thumbnail,category:category
     }).select().single();
     if(r.error)throw r.error;
     currentProjectId=r.data.id;
@@ -2351,13 +1787,10 @@ async function saveProject(){
     if(err.message==='تم الإلغاء')showToast('تم إلغاء الحفظ');
     else showToast('فشل الحفظ: '+(err.message||'خطأ'));
   } finally {
-    hideLoading();
-    btn.disabled=false;
-    btn.textContent='💾';
+    hideLoading();btn.disabled=false;btn.textContent='💾';
   }
 }
 
-// ============ PROJECTS LIST ============
 async function openProjects(){
   if(!currentUser)return;
   document.getElementById('projectsOverlay').classList.add('active');
@@ -2367,46 +1800,25 @@ async function openProjects(){
     var r=await sb.from('projects').select('id,name,thumbnail,created_at,is_public').order('created_at',{ascending:false});
     if(r.error)throw r.error;
     var data=r.data;
-    if(!data||data.length===0){
-      list.innerHTML='<div class="empty-hint">لا توجد مشاريع محفوظة</div>';
-      return;
-    }
+    if(!data||data.length===0){list.innerHTML='<div class="empty-hint">لا توجد مشاريع محفوظة</div>';return;}
     list.innerHTML='';
     data.forEach(function(p){
-      var el=document.createElement('div');
-      el.className='project-item';
-      var thumb=document.createElement('img');
-      thumb.className='project-thumb';
-      thumb.src=p.thumbnail||'';
-      var info=document.createElement('div');
-      info.className='project-info';
+      var el=document.createElement('div');el.className='project-item';
+      var thumb=document.createElement('img');thumb.className='project-thumb';thumb.src=p.thumbnail||'';
+      var info=document.createElement('div');info.className='project-info';
       info.innerHTML='<div class="project-name">'+escapeHtml(p.name)+'</div><div class="project-date">'+new Date(p.created_at).toLocaleString('ar')+'</div>';
-      var acts=document.createElement('div');
-      acts.className='project-actions';
-      var lb=document.createElement('button');
-      lb.className='project-load';
-      lb.textContent='فتح';
-      lb.onclick=function(){loadProjectById(p.id);};
+      var acts=document.createElement('div');acts.className='project-actions';
+      var lb=document.createElement('button');lb.className='project-load';lb.textContent='فتح';lb.onclick=function(){loadProjectById(p.id);};
       var pubBtn=document.createElement('button');
       pubBtn.className='project-pub'+(p.is_public?' on':'');
       pubBtn.textContent=p.is_public?'🌐 عام':'نشر';
       pubBtn.onclick=function(){togglePublic(p.id,!p.is_public);};
-      var db=document.createElement('button');
-      db.className='project-del';
-      db.textContent='حذف';
-      db.onclick=function(){deleteProjectById(p.id);};
-      acts.appendChild(lb);
-      acts.appendChild(pubBtn);
-      acts.appendChild(db);
-      el.appendChild(thumb);
-      el.appendChild(info);
-      el.appendChild(acts);
+      var db=document.createElement('button');db.className='project-del';db.textContent='حذف';db.onclick=function(){deleteProjectById(p.id);};
+      acts.appendChild(lb);acts.appendChild(pubBtn);acts.appendChild(db);
+      el.appendChild(thumb);el.appendChild(info);el.appendChild(acts);
       list.appendChild(el);
     });
-  } catch(err){
-    console.error(err);
-    list.innerHTML='<div class="empty-hint">فشل التحميل</div>';
-  }
+  } catch(err){console.error(err);list.innerHTML='<div class="empty-hint">فشل التحميل</div>';}
 }
 
 async function togglePublic(id,makePublic){
@@ -2419,19 +1831,14 @@ async function togglePublic(id,makePublic){
 }
 
 async function loadProjectById(id){
-  closeProjects();
-  showLoading('جاري تحميل المشروع...');
+  closeProjects();showLoading('جاري تحميل المشروع...');
   try{
     var r=await sb.from('projects').select('*').eq('id',id).single();
     if(r.error)throw r.error;
     currentProjectId=r.data.id;
     await loadProjectData(r.data.data);
-  } catch(err){
-    console.error(err);
-    showToast('فشل فتح المشروع');
-  } finally {
-    hideLoading();
-  }
+  } catch(err){console.error(err);showToast('فشل فتح المشروع');}
+  finally{hideLoading();}
 }
 
 async function deleteProjectById(id){
@@ -2439,22 +1846,15 @@ async function deleteProjectById(id){
   try{
     var r=await sb.from('projects').delete().eq('id',id);
     if(r.error)throw r.error;
-    showToast('تم الحذف');
-    openProjects();
+    showToast('تم الحذف');openProjects();
   } catch(err){showToast('فشل');}
 }
 
-// ============ LOAD PROJECT DATA ============
+// ✅ loadProjectData محسّن - يحفظ الصوت والمدة الحقيقية
 async function loadProjectData(data){
   if(!data)return;
-  images=[];
-  audioUpload=null;
-  musicFile=null;
-  recordedAudioBlob=null;
-  selectedAudio=null;
-  textElements=[];
-  stickers=[];
-  watermark=null;
+  images=[];audioUpload=null;musicFile=null;recordedAudioBlob=null;selectedAudio=null;
+  textElements=[];stickers=[];watermark=null;
   document.getElementById('musicInfo').classList.add('section-hidden');
   document.getElementById('audioUploadInfo').classList.add('section-hidden');
   document.getElementById('recordPlayer').classList.remove('active');
@@ -2464,9 +1864,7 @@ async function loadProjectData(data){
   if(data.backgroundCustomColor)backgroundCustomColor=data.backgroundCustomColor;
   if(data.exportQuality){
     exportQuality=data.exportQuality;
-    document.querySelectorAll('#qualityOptions .opt-btn').forEach(function(b){
-      b.classList.toggle('active',b.dataset.quality===exportQuality);
-    });
+    document.querySelectorAll('#qualityOptions .opt-btn').forEach(function(b){b.classList.toggle('active',b.dataset.quality===exportQuality);});
   }
   if(data.images&&data.images.length>0){
     var loaded=0,total=data.images.length;
@@ -2476,14 +1874,19 @@ async function loadProjectData(data){
           var url=URL.createObjectURL(blob);
           var video=document.createElement('video');
           video.src=url;
-          video.muted=true;
+          video.muted=false;  // ✅ الصوت مفعّل
           video.playsInline=true;
           video.preload='metadata';
           video.onloadedmetadata=function(){
             video.currentTime=saved.trim?saved.trim.start:0.1;
+            // ✅ استخدم المدة الحقيقية
+            var realDuration=video.duration;
+            if(!realDuration||isNaN(realDuration))realDuration=saved.originalDuration||saved.duration||18;
             images[i]={
               type:'video',img:video,media:video,originalImg:video,blob:blob,src:url,
-              animation:saved.animation||'fadeIn',duration:saved.duration||5,
+              animation:saved.animation||'fadeIn',
+              duration:saved.duration&&!isNaN(saved.duration)?saved.duration:realDuration,
+              originalDuration:realDuration,
               rotation:saved.rotation||0,flipH:!!saved.flipH,flipV:!!saved.flipV,
               speed:saved.speed!==undefined?saved.speed:1,
               crop:saved.crop||null,trim:saved.trim||null,filter:saved.filter||'none'
@@ -2508,29 +1911,17 @@ async function loadProjectData(data){
         img.src=saved.src;
       }
     });
-  } else {
-    renderImagesGrid();
-    updateInfo();
-  }
+  } else {renderImagesGrid();updateInfo();}
   function finalize(data){
     currentSize=data.currentSize||'1080x1080';
     currentTransition=data.currentTransition||'fade';
     currentLayout=data.currentLayout||'single';
-    document.querySelectorAll('#sizeOptions .opt-btn').forEach(function(b){
-      b.classList.toggle('active',b.dataset.size===currentSize);
-    });
-    document.querySelectorAll('#transitionOptions .opt-btn').forEach(function(b){
-      b.classList.toggle('active',b.dataset.transition===currentTransition);
-    });
+    document.querySelectorAll('#sizeOptions .opt-btn').forEach(function(b){b.classList.toggle('active',b.dataset.size===currentSize);});
+    document.querySelectorAll('#transitionOptions .opt-btn').forEach(function(b){b.classList.toggle('active',b.dataset.transition===currentTransition);});
     if(data.textElements)textElements=data.textElements;
     if(data.stickers)stickers=data.stickers;
     if(data.watermark){
-      watermark={
-        enabled:data.watermark.enabled,type:data.watermark.type,
-        text:data.watermark.text,color:data.watermark.color,
-        size:data.watermark.size,position:data.watermark.position,
-        opacity:data.watermark.opacity
-      };
+      watermark={enabled:data.watermark.enabled,type:data.watermark.type,text:data.watermark.text,color:data.watermark.color,size:data.watermark.size,position:data.watermark.position,opacity:data.watermark.opacity};
       if(data.watermark.imageUrl){
         var wmImg=new Image();
         wmImg.onload=function(){watermark.img=wmImg;window._wmImgCache=wmImg;};
@@ -2542,29 +1933,17 @@ async function loadProjectData(data){
         document.getElementById('wmContent').classList.remove('section-hidden');
       }
     }
-    renderImagesGrid();
-    renderLayouts();
-    updateButtons();
-    updateInfo();
-    renderElementsList();
-    pushHistory();
+    renderImagesGrid();renderLayouts();updateButtons();updateInfo();renderElementsList();pushHistory();
     showToast('تم تحميل المشروع ✅');
   }
 }
 
-window.closeProjects=function(){
-  document.getElementById('projectsOverlay').classList.remove('active');
-};
+window.closeProjects=function(){document.getElementById('projectsOverlay').classList.remove('active');};
 
-// ============ GALLERY ============
 var currentGalleryFilter='all';
 var currentGalleryProject=null;
 var currentViewProjectId=null;
-var GALLERY_CATEGORIES=[
-  {id:'all',name:'الكل'},{id:'عام',name:'عام'},{id:'ريلز',name:'ريلز'},
-  {id:'ستوري',name:'ستوري'},{id:'منشور',name:'منشور'},
-  {id:'إعلان',name:'إعلان'},{id:'مناسبات',name:'مناسبات'}
-];
+var GALLERY_CATEGORIES=[{id:'all',name:'الكل'},{id:'عام',name:'عام'},{id:'ريلز',name:'ريلز'},{id:'ستوري',name:'ستوري'},{id:'منشور',name:'منشور'},{id:'إعلان',name:'إعلان'},{id:'مناسبات',name:'مناسبات'}];
 
 async function openGallery(){
   if(!currentUser){showToast('سجّل دخول');return;}
@@ -2585,8 +1964,7 @@ function buildGalleryCategories(){
     btn.onclick=function(){
       currentGalleryFilter=cat.id;
       bar.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');});
-      btn.classList.add('active');
-      loadGallery();
+      btn.classList.add('active');loadGallery();
     };
     bar.appendChild(btn);
   });
@@ -2608,10 +1986,7 @@ async function loadGallery(){
     var r=await query;
     if(r.error)throw r.error;
     var data=r.data;
-    if(!data||data.length===0){
-      list.innerHTML='<div class="empty-hint">لا توجد نتائج</div>';
-      return;
-    }
+    if(!data||data.length===0){list.innerHTML='<div class="empty-hint">لا توجد نتائج</div>';return;}
     var html='<div class="gallery-grid">';
     data.forEach(function(p){
       var author=p.user_id?p.user_id.substring(0,8):'مستخدم';
@@ -2628,10 +2003,7 @@ async function loadGallery(){
     });
     html+='</div>';
     list.innerHTML=html;
-  } catch(err){
-    console.error(err);
-    list.innerHTML='<div class="empty-hint">فشل التحميل</div>';
-  }
+  } catch(err){console.error(err);list.innerHTML='<div class="empty-hint">فشل التحميل</div>';}
 }
 
 async function viewProject(id){
@@ -2651,11 +2023,8 @@ async function viewProject(id){
     var likeR=await sb.from('likes').select('id').eq('project_id',id).eq('user_id',currentUser.id).maybeSingle();
     var isLiked=likeR.data!=null;
     var preview=document.getElementById('viewProjectPreview');
-    if(p.thumbnail){
-      preview.innerHTML='<img src="'+p.thumbnail+'" style="max-width:100%;max-height:300px;border-radius:8px;">';
-    } else {
-      preview.innerHTML='<div style="color:#64748b;">لا توجد معاينة</div>';
-    }
+    if(p.thumbnail){preview.innerHTML='<img src="'+p.thumbnail+'" style="max-width:100%;max-height:300px;border-radius:8px;">';}
+    else{preview.innerHTML='<div style="color:#64748b;">لا توجد معاينة</div>';}
     document.getElementById('viewProjectInfo').innerHTML=
       '<div class="info-row"><span>المبدع</span><span class="info-row-value">👤 '+author+'</span></div>'+
       '<div class="info-row"><span>الإعجابات</span><span class="info-row-value">❤️ '+(p.likes_count||0)+'</span></div>'+
@@ -2663,14 +2032,11 @@ async function viewProject(id){
       '<div class="info-row"><span>التصنيف</span><span class="info-row-value">'+(p.category||'عام')+'</span></div>';
     var likeBtn=document.querySelector('#viewProjectOverlay .btn-export');
     if(likeBtn){
-      if(isLiked){likeBtn.textContent='💔 إزالة الإعجاب';likeBtn.style.background='#64748b';}
-      else{likeBtn.textContent='❤️ إعجاب';likeBtn.style.background='#10b981';}
+      if(isLiked){likeBtn.innerHTML='<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg> إزالة';likeBtn.style.background='#64748b';}
+      else{likeBtn.innerHTML='<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg> إعجاب';likeBtn.style.background='#10b981';}
       likeBtn.dataset.liked=isLiked?'1':'0';
     }
-  } catch(err){
-    console.error(err);
-    showToast('فشل التحميل');
-  }
+  } catch(err){console.error(err);showToast('فشل التحميل');}
 }
 
 async function likeCurrentProject(){
@@ -2687,50 +2053,34 @@ async function likeCurrentProject(){
       if(r.error)throw r.error;
       showToast('❤️ تم الإعجاب');
     }
-    viewProject(currentViewProjectId);
-    loadGallery();
-  } catch(err){
-    console.error(err);
-    showToast('فشل');
-  }
+    viewProject(currentViewProjectId);loadGallery();
+  } catch(err){console.error(err);showToast('فشل');}
 }
 
 async function copyCurrentProject(){
   if(!currentGalleryProject)return;
   if(!confirm('نسخ هذا المشروع للتعديل عليه؟'))return;
-  closeViewProject();
-  showLoading('جاري النسخ...');
-  try{
-    await loadProjectData(currentGalleryProject.data);
-    showToast('✅ تم نسخ المشروع');
-  } catch(err){
-    console.error(err);
-    showToast('فشل النسخ');
-  } finally {
-    hideLoading();
-  }
+  closeViewProject();showLoading('جاري النسخ...');
+  try{await loadProjectData(currentGalleryProject.data);showToast('✅ تم نسخ المشروع');}
+  catch(err){console.error(err);showToast('فشل النسخ');}
+  finally{hideLoading();}
 }
 
 function closeViewProject(){
   document.getElementById('viewProjectOverlay').classList.remove('active');
-  currentViewProjectId=null;
-  currentGalleryProject=null;
+  currentViewProjectId=null;currentGalleryProject=null;
 }
 
 window.viewProject=viewProject;
 window.likeCurrentProject=likeCurrentProject;
 window.copyCurrentProject=copyCurrentProject;
 window.closeViewProject=closeViewProject;
-window.closeGallery=function(){
-  document.getElementById('galleryOverlay').classList.remove('active');
-};
+window.closeGallery=function(){document.getElementById('galleryOverlay').classList.remove('active');};
 
-// ============ BUTTON LISTENERS ============
 document.getElementById('saveProjectBtn').addEventListener('click',saveProject);
 document.getElementById('myProjectsBtn').addEventListener('click',openProjects);
 document.getElementById('galleryBtn').addEventListener('click',openGallery);
 
-// ============ CAMERA ============
 var cameraStream=null,cameraRecorder=null,cameraChunks=[];
 var cameraTimerInterval=null,cameraStartTime=0;
 var cameraFacing='environment',cameraMaxDuration=30,cameraFlashOn=false,cameraMuted=false;
@@ -2740,10 +2090,7 @@ window.openCamera=async function(){
     await startCameraStream();
     document.getElementById('cameraOverlay').classList.add('active');
     document.body.style.overflow='hidden';
-  } catch(err){
-    console.error(err);
-    showToast('لم يتم السماح بالكاميرا');
-  }
+  } catch(err){console.error(err);showToast('لم يتم السماح بالكاميرا');}
 };
 
 async function startCameraStream(){
@@ -2770,8 +2117,7 @@ function applyCameraMuteState(){
 }
 
 window.toggleCameraMute=function(){
-  cameraMuted=!cameraMuted;
-  applyCameraMuteState();
+  cameraMuted=!cameraMuted;applyCameraMuteState();
   showToast(cameraMuted?'تم كتم الصوت':'تم تفعيل الصوت');
 };
 
@@ -2789,10 +2135,7 @@ window.closeCamera=function(){
 window.switchCamera=async function(){
   cameraFacing=cameraFacing==='environment'?'user':'environment';
   try{await startCameraStream();}
-  catch(err){
-    cameraFacing=cameraFacing==='environment'?'user':'environment';
-    showToast('لم يتم تبديل الكاميرا');
-  }
+  catch(err){cameraFacing=cameraFacing==='environment'?'user':'environment';showToast('لم يتم تبديل الكاميرا');}
 };
 
 window.toggleCameraFlash=function(){
@@ -2814,14 +2157,9 @@ function startCameraRecording(){
   if(!cameraStream)return;
   cameraChunks=[];
   applyCameraMuteState();
-  var mimeOptions=[
-    'video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4;codecs=avc1','video/mp4',
-    'video/webm;codecs=h264','video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'
-  ];
+  var mimeOptions=['video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4;codecs=avc1','video/mp4','video/webm;codecs=h264','video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'];
   var mimeType='';
-  for(var i=0;i<mimeOptions.length;i++){
-    if(MediaRecorder.isTypeSupported(mimeOptions[i])){mimeType=mimeOptions[i];break;}
-  }
+  for(var i=0;i<mimeOptions.length;i++){if(MediaRecorder.isTypeSupported(mimeOptions[i])){mimeType=mimeOptions[i];break;}}
   var options=mimeType?{mimeType:mimeType}:{};
   try{cameraRecorder=new MediaRecorder(cameraStream,options);}
   catch(err){showToast('التسجيل غير مدعوم');return;}
@@ -2848,10 +2186,7 @@ function updateCameraTimer(){
   const m=Math.floor(elapsed/60).toString().padStart(2,'0');
   const s=(elapsed%60).toString().padStart(2,'0');
   document.getElementById('cameraTimer').textContent=m+':'+s;
-  if(elapsed>=cameraMaxDuration){
-    stopCameraRecording();
-    showToast('وصلت للحد الأقصى ('+cameraMaxDuration+' ث)');
-  }
+  if(elapsed>=cameraMaxDuration){stopCameraRecording();showToast('وصلت للحد الأقصى ('+cameraMaxDuration+' ث)');}
 }
 
 async function addVideoToProject(blob,mimeType){
@@ -2865,61 +2200,43 @@ async function addVideoToProject(blob,mimeType){
     var url=URL.createObjectURL(file);
     var video=document.createElement('video');
     video.src=url;
-    video.muted=false;
-    video.playsInline=true;
-    video.preload='metadata';
+    video.muted=false;video.playsInline=true;video.preload='metadata';
     await new Promise(function(res,rej){
       video.onloadedmetadata=function(){res();};
       video.onerror=function(){rej(new Error('فشل تحميل الفيديو'));};
       setTimeout(function(){rej(new Error('انتهت المهلة'));},10000);
     });
     video.currentTime=0.1;
-    await new Promise(function(res){
-      video.onseeked=function(){res();};
-      setTimeout(res,1500);
-    });
+    await new Promise(function(res){video.onseeked=function(){res();};setTimeout(res,1500);});
     var duration=Math.min(video.duration||5,60);
     var item={
       type:'video',media:video,img:video,src:url,blob:file,
       fileName:'camera-'+Date.now()+'.'+ext,mimeType:mimeType,
-      animation:'fadeIn',duration:duration,rotation:0,flipH:false,flipV:false,
-      speed:1,crop:null,trim:null,filter:'none'
+      animation:'fadeIn',duration:duration,originalDuration:duration,
+      rotation:0,flipH:false,flipV:false,speed:1,crop:null,trim:null,filter:'none'
     };
     item.originalImg=video;
     images.push(item);
     if(selectedImageIndex<0)selectedImageIndex=images.length-1;
-    renderImagesGrid();
-    renderLayouts();
-    updateButtons();
-    updateInfo();
-    pushHistory();
+    renderImagesGrid();renderLayouts();updateButtons();updateInfo();pushHistory();
     hideLoading();
     var formatLabel=(ext==='mp4')?'MP4 ✅':'WebM';
     showToast('تمت إضافة الفيديو ('+duration.toFixed(1)+' ث) - '+formatLabel);
     closeCamera();
-  } catch(err){
-    console.error(err);
-    hideLoading();
-    showToast('فشل إضافة الفيديو: '+(err.message||''));
-  }
+  } catch(err){console.error(err);hideLoading();showToast('فشل إضافة الفيديو: '+(err.message||''));}
 }
 
 window.handleCameraFileUpload=async function(event){
-  var file=event.target.files[0];
-  if(!file)return;
+  var file=event.target.files[0];if(!file)return;
   if(!file.type.startsWith('video/')){showToast('الرجاء اختيار ملف فيديو');return;}
   await addVideoToProject(file,file.type);
   event.target.value='';
 };
 
-// ============ DRAGGABLE ZONES ============
 var dragState={active:false,type:null,index:-1,offsetX:0,offsetY:0};
 var selectedElement={type:null,index:-1};
 
-function getCanvasRect(){
-  var canvas=document.getElementById('previewCanvas');
-  return canvas.getBoundingClientRect();
-}
+function getCanvasRect(){var canvas=document.getElementById('previewCanvas');return canvas.getBoundingClientRect();}
 
 function _renderDraggableZones_impl(){
   var wrapper=document.getElementById('draggableZones');
@@ -2937,25 +2254,14 @@ function _renderDraggableZones_impl(){
     zone.className='draggable-zone active';
     if(selectedElement.type==='text'&&selectedElement.index===i)zone.classList.add('selected');
     var w=Math.min(260,Math.max(140,el.text.length*14)),h=80;
-    zone.style.width=w+'px';
-    zone.style.height=h+'px';
+    zone.style.width=w+'px';zone.style.height=h+'px';
     zone.style.left=(offsetX+el.x*rect.width-w/2)+'px';
     zone.style.top=(offsetY+el.y*rect.height-h/2)+'px';
-    zone.dataset.type='text';
-    zone.dataset.index=i;
+    zone.dataset.type='text';zone.dataset.index=i;
     var del=document.createElement('button');
     del.textContent='×';
     del.style.cssText='position:absolute;top:-8px;right:-8px;width:24px;height:24px;background:#ef4444;color:#fff;border:2px solid #fff;border-radius:50%;cursor:pointer;font-weight:900;font-size:13px;line-height:1;padding:0;z-index:11;';
-    del.onclick=function(e){
-      e.stopPropagation();
-      textElements.splice(i,1);
-      selectedElement={type:null,index:-1};
-      renderElementsList();
-      renderDraggableZones();
-      pushHistory();
-      activateCanvasForDrag();
-      showToast('تم حذف النص');
-    };
+    del.onclick=function(e){e.stopPropagation();textElements.splice(i,1);selectedElement={type:null,index:-1};renderElementsList();renderDraggableZones();pushHistory();activateCanvasForDrag();showToast('تم حذف النص');};
     zone.appendChild(del);
     attachDragEvents(zone);
     wrapper.appendChild(zone);
@@ -2966,34 +2272,21 @@ function _renderDraggableZones_impl(){
     zone.className='draggable-zone active';
     if(selectedElement.type==='sticker'&&selectedElement.index===i)zone.classList.add('selected');
     var size=80;
-    zone.style.width=size+'px';
-    zone.style.height=size+'px';
+    zone.style.width=size+'px';zone.style.height=size+'px';
     zone.style.left=(offsetX+el.x*rect.width-size/2)+'px';
     zone.style.top=(offsetY+el.y*rect.height-size/2)+'px';
-    zone.dataset.type='sticker';
-    zone.dataset.index=i;
+    zone.dataset.type='sticker';zone.dataset.index=i;
     var del=document.createElement('button');
     del.textContent='×';
     del.style.cssText='position:absolute;top:-8px;right:-8px;width:24px;height:24px;background:#ef4444;color:#fff;border:2px solid #fff;border-radius:50%;cursor:pointer;font-weight:900;font-size:13px;line-height:1;padding:0;z-index:11;';
-    del.onclick=function(e){
-      e.stopPropagation();
-      stickers.splice(i,1);
-      selectedElement={type:null,index:-1};
-      renderElementsList();
-      renderDraggableZones();
-      pushHistory();
-      activateCanvasForDrag();
-      showToast('تم حذف الملصق');
-    };
+    del.onclick=function(e){e.stopPropagation();stickers.splice(i,1);selectedElement={type:null,index:-1};renderElementsList();renderDraggableZones();pushHistory();activateCanvasForDrag();showToast('تم حذف الملصق');};
     zone.appendChild(del);
     attachDragEvents(zone);
     wrapper.appendChild(zone);
   });
 }
 
-function renderDraggableZones(){
-  setTimeout(_renderDraggableZones_impl,30);
-}
+function renderDraggableZones(){setTimeout(_renderDraggableZones_impl,30);}
 window._renderDraggableZones=renderDraggableZones;
 
 function startDrag(e){
@@ -3004,17 +2297,13 @@ function startDrag(e){
   var rect=getCanvasRect();
   var item=type==='text'?textElements[index]:stickers[index];
   if(!item)return;
-  dragState.active=true;
-  dragState.type=type;
-  dragState.index=index;
+  dragState.active=true;dragState.type=type;dragState.index=index;
   dragState.offsetX=(touch.clientX-rect.left)/rect.width-item.x;
   dragState.offsetY=(touch.clientY-rect.top)/rect.height-item.y;
-  selectedElement.type=type;
-  selectedElement.index=index;
+  selectedElement.type=type;selectedElement.index=index;
   zone.classList.add('dragging');
   document.getElementById('previewWrapper').classList.add('dragging');
-  e.preventDefault();
-  e.stopPropagation();
+  e.preventDefault();e.stopPropagation();
 }
 
 function moveDrag(e){
@@ -3026,28 +2315,21 @@ function moveDrag(e){
   newX=Math.max(0.05,Math.min(0.95,newX));
   newY=Math.max(0.05,Math.min(0.95,newY));
   var item=dragState.type==='text'?textElements[dragState.index]:stickers[dragState.index];
-  if(item){
-    item.x=newX;
-    item.y=newY;
-    _updateZonePosition(dragState.type,dragState.index,newX,newY);
-  }
+  if(item){item.x=newX;item.y=newY;_updateZonePosition(dragState.type,dragState.index,newX,newY);}
   e.preventDefault();
 }
 
 function _updateZonePosition(type,index,x,y){
   var zones=document.querySelectorAll('.draggable-zone');
   var target=null;
-  zones.forEach(function(z){
-    if(z.dataset.type===type&&parseInt(z.dataset.index)===index)target=z;
-  });
+  zones.forEach(function(z){if(z.dataset.type===type&&parseInt(z.dataset.index)===index)target=z;});
   if(!target)return;
   var canvas=document.getElementById('previewCanvas');
   var rect=canvas.getBoundingClientRect();
   var parentRect=document.getElementById('previewWrapper').getBoundingClientRect();
   var offsetX=rect.left-parentRect.left;
   var offsetY=rect.top-parentRect.top;
-  var w=target.offsetWidth;
-  var h=target.offsetHeight;
+  var w=target.offsetWidth;var h=target.offsetHeight;
   target.style.left=(offsetX+x*rect.width-w/2)+'px';
   target.style.top=(offsetY+y*rect.height-h/2)+'px';
   redrawStaticPreview();
@@ -3079,21 +2361,96 @@ function redrawStaticPreview(){
   var sz=currentSize.split('x');
   var w=parseInt(sz[0]),h=parseInt(sz[1]);
   var ps=Math.min(400/w,400/h,1);
-  canvas.width=w*ps;
-  canvas.height=h*ps;
+  canvas.width=w*ps;canvas.height=h*ps;
   ctx.clearRect(0,0,canvas.width,canvas.height);
   if(images.length>0){drawLayout(ctx,0,canvas.width,canvas.height,1,0.5);}
   drawOverlays(ctx,canvas.width,canvas.height);
 }
 
-// ============ RESIZE ============
+// ============ Theme Toggle ============
+(function initTheme(){
+  var saved=localStorage.getItem('resha-theme')||'light';
+  if(saved==='dark'){document.documentElement.classList.add('dark-mode');document.body.classList.add('dark-mode');}
+})();
+
+window.addEventListener('load',function(){
+  var btn=document.getElementById('themeBtn');
+  if(!btn)return;
+  btn.addEventListener('click',function(){
+    var isDark=!document.body.classList.contains('dark-mode');
+    document.documentElement.classList.toggle('dark-mode',isDark);
+    document.body.classList.toggle('dark-mode',isDark);
+    localStorage.setItem('resha-theme',isDark?'dark':'light');
+    btn.style.transform='scale(0.9)';
+    setTimeout(function(){btn.style.transform='';},150);
+    if(typeof showToast==='function'){showToast(isDark?'🌙 الوضع الليلي':'☀️ الوضع النهاري');}
+  });
+});
+
+// ============ زر الإبلاغ ============
+window.reportProject = async function() {
+  if (!currentUser) { showToast('سجل دخول أولاً'); return; }
+  if (!currentViewProjectId) { showToast('ما فيه مشروع محدد'); return; }
+  var reasons = ['🚨 ابتزاز أو تهديد','⚠️ تشهير','🔒 انتهاك خصوصية','👤 تصوير بدون إذن','🚫 محتوى غير لائق','📋 انتهاك حقوق نشر','❓ سبب آخر'];
+  var choice = prompt('اختر سبب الإبلاغ (رقم):\n\n' + reasons.map(function(r, i) { return (i+1) + '. ' + r; }).join('\n') + '\n\n(اضغط Cancel للإلغاء)');
+  if (!choice) return;
+  var idx = parseInt(choice) - 1;
+  if (isNaN(idx) || idx < 0 || idx >= reasons.length) { showToast('اختيار غير صحيح'); return; }
+  var details = prompt('تفاصيل إضافية (اختياري):') || '';
+  try {
+    var result = await sb.from('reports').insert({
+      reporter_id: currentUser.id,
+      project_id: currentViewProjectId,
+      reason: reasons[idx],
+      details: details
+    });
+    if (result.error) throw result.error;
+    showToast('✅ تم الإبلاغ — شكراً لك');
+    checkAutoHideProject(currentViewProjectId);
+  } catch (err) {
+    console.error('خطأ الإبلاغ:', err);
+    showToast('فشل الإبلاغ');
+  }
+};
+
+async function checkAutoHideProject(projectId) {
+  try {
+    var result = await sb.from('reports').select('*', { count: 'exact', head: true }).eq('project_id', projectId);
+    if (result.count && result.count >= 3) {
+      await sb.from('projects').update({ is_hidden: true }).eq('id', projectId);
+      showToast('🚫 تم إخفاء المشروع تلقائياً');
+    }
+  } catch (err) { console.error('خطأ الإخفاء:', err); }
+}
+
+// ============ زر الحظر ============
+window.blockCurrentUser = async function() {
+  if (!currentUser) { showToast('سجل دخول أولاً'); return; }
+  if (!currentGalleryProject) { showToast('ما فيه مشروع محدد'); return; }
+  var targetUserId = currentGalleryProject.user_id;
+  if (!targetUserId) { showToast('ما أقدر أحظر هذا المستخدم'); return; }
+  if (targetUserId === currentUser.id) { showToast('ما تقدر تحظر نفسك'); return; }
+  if (!confirm('هل تريد حظر هذا المستخدم؟\n\nلن ترى مشاريعه بعد الآن.')) { return; }
+  try {
+    var result = await sb.from('blocks').insert({ blocker_id: currentUser.id, blocked_id: targetUserId });
+    if (result.error) {
+      if (result.error.message && result.error.message.includes('duplicate')) { showToast('محظور من قبل'); return; }
+      throw result.error;
+    }
+    showToast('✅ تم الحظر');
+    closeViewProject();
+    if (typeof loadGallery === 'function') loadGallery();
+  } catch (err) {
+    console.error('خطأ الحظر:', err);
+    showToast('فشل الحظر');
+  }
+};
+
 window.addEventListener('resize',function(){setTimeout(renderDraggableZones,200);});
 window.addEventListener('orientationchange',function(){setTimeout(renderDraggableZones,400);});
 
-// ============ INIT ============
 window.addEventListener('load',function(){
-  renderLayouts();
-  updateInfo();
+  renderLayouts();updateInfo();
   if(!window.MediaRecorder){
     showToast('متصفحك لا يدعم تصدير الفيديو');
     document.getElementById('exportBtn').disabled=true;
@@ -3104,227 +2461,5 @@ window.addEventListener('load',function(){
   }
   trackEvent('montage-زيارة');
   setTimeout(function(){pushHistory();},500);
-  console.log('✅ ريشة المونتاج v7.0 — كل المميزات');
+  console.log('✅ ريشة المونتاج v7.1 — إصلاح الصوت والمدة');
 });
-
-// ============ THEME TOGGLE (قمر ⇄ شمس) ============
-(function initTheme(){
-  var saved=localStorage.getItem('resha-theme')||'light';
-  if(saved==='dark'){
-    document.body.classList.add('dark-mode');
-  }
-})();
-
-window.addEventListener('load',function(){
-  var btn=document.getElementById('themeBtn');
-  if(!btn)return;
-  btn.addEventListener('click',function(){
-    var isDark=document.body.classList.toggle('dark-mode');
-    localStorage.setItem('resha-theme',isDark?'dark':'light');
-    btn.style.transform='scale(0.9)';
-    setTimeout(function(){btn.style.transform='';},150);
-    if(typeof showToast==='function'){
-      showToast(isDark?'🌙 الوضع الليلي':'☀️ الوضع النهاري');
-    }
-  });
-});
-
-// ============ زر الإبلاغ ============
-window.reportProject = async function() {
-  if (!currentUser) { showToast('سجل دخول أولاً'); return; }
-  if (!currentViewProjectId) { showToast('ما فيه مشروع'); return; }
-  
-  var reasons = [
-    '🚨 ابتزاز أو تهديد',
-    '⚠️ تشهير',
-    '🔒 انتهاك خصوصية',
-    '👤 تصوير بدون إذن',
-    '🚫 محتوى غير لائق',
-    '📋 انتهاك حقوق نشر',
-    '❓ سبب آخر'
-  ];
-  
-  var choice = prompt('اختر سبب الإبلاغ (رقم):\n\n' + reasons.map(function(r,i){return (i+1)+'. '+r;}).join('\n'));
-  if (!choice) return;
-  
-  var idx = parseInt(choice) - 1;
-  if (isNaN(idx) || idx < 0 || idx >= reasons.length) { showToast('اختيار غير صحيح'); return; }
-  
-  var details = prompt('تفاصيل إضافية (اختياري):') || '';
-  
-  try {
-    await sb.from('reports').insert({
-      reporter_id: currentUser.id,
-      project_id: currentViewProjectId,
-      reason: reasons[idx],
-      details: details
-    });
-    showToast('✅ تم الإبلاغ — شكراً لك');
-  } catch(err) {
-    console.error(err);
-    showToast('فشل الإبلاغ');
-  }
-};
-
-// ============ زر الحظر ============
-window.blockCurrentUser = async function() {
-  if (!currentUser) { showToast('سجل دخول أولاً'); return; }
-  if (!currentGalleryProject) { showToast('ما فيه مشروع'); return; }
-  
-  var targetId = currentGalleryProject.user_id;
-  if (!targetId) { showToast('ما أقدر أحظر هذا المستخدم'); return; }
-  if (targetId === currentUser.id) { showToast('ما تقدر تحظر نفسك'); return; }
-  
-  if (!confirm('هل تريد حظر هذا المستخدم؟\n\nلن ترى مشاريعه بعد الآن.')) return;
-  
-  try {
-    await sb.from('blocks').insert({
-      blocker_id: currentUser.id,
-      blocked_id: targetId
-    });
-    showToast('✅ تم الحظر');
-    closeViewProject();
-    if (typeof loadGallery === 'function') loadGallery();
-  } catch(err) {
-    if (err.message && err.message.includes('duplicate')) {
-      showToast('محظور من قبل');
-    } else {
-      console.error(err);
-      showToast('فشل الحظر');
-    }
-  }
-};
-
-
-// ============================================================
-// ============ زر الإبلاغ ====================================
-// ============================================================
-window.reportProject = async function() {
-  if (!currentUser) {
-    showToast('سجل دخول أولاً');
-    return;
-  }
-  
-  if (!currentViewProjectId) {
-    showToast('ما فيه مشروع محدد');
-    return;
-  }
-  
-  var reasons = [
-    '🚨 ابتزاز أو تهديد',
-    '⚠️ تشهير',
-    '🔒 انتهاك خصوصية',
-    '👤 تصوير بدون إذن',
-    '🚫 محتوى غير لائق',
-    '📋 انتهاك حقوق نشر',
-    '❓ سبب آخر'
-  ];
-  
-  var choice = prompt(
-    'اختر سبب الإبلاغ (رقم):\n\n' +
-    reasons.map(function(r, i) { return (i+1) + '. ' + r; }).join('\n') +
-    '\n\n(اضغط Cancel للإلغاء)'
-  );
-  
-  if (!choice) return;
-  
-  var idx = parseInt(choice) - 1;
-  if (isNaN(idx) || idx < 0 || idx >= reasons.length) {
-    showToast('اختيار غير صحيح');
-    return;
-  }
-  
-  var details = prompt('تفاصيل إضافية (اختياري):') || '';
-  
-  try {
-    var result = await sb.from('reports').insert({
-      reporter_id: currentUser.id,
-      project_id: currentViewProjectId,
-      reason: reasons[idx],
-      details: details
-    });
-    
-    if (result.error) throw result.error;
-    
-    showToast('✅ تم الإبلاغ — شكراً لك');
-    checkAutoHideProject(currentViewProjectId);
-    
-  } catch (err) {
-    console.error('خطأ الإبلاغ:', err);
-    showToast('فشل الإبلاغ');
-  }
-};
-
-async function checkAutoHideProject(projectId) {
-  try {
-    var result = await sb
-      .from('reports')
-      .select('*', { count: 'exact', head: true })
-      .eq('project_id', projectId);
-    
-    if (result.count && result.count >= 3) {
-      await sb
-        .from('projects')
-        .update({ is_hidden: true })
-        .eq('id', projectId);
-      
-      showToast('🚫 تم إخفاء المشروع تلقائياً');
-    }
-  } catch (err) {
-    console.error('خطأ الإخفاء:', err);
-  }
-}
-
-// ============================================================
-// ============ زر الحظر ======================================
-// ============================================================
-window.blockCurrentUser = async function() {
-  if (!currentUser) {
-    showToast('سجل دخول أولاً');
-    return;
-  }
-  
-  if (!currentGalleryProject) {
-    showToast('ما فيه مشروع محدد');
-    return;
-  }
-  
-  var targetUserId = currentGalleryProject.user_id;
-  
-  if (!targetUserId) {
-    showToast('ما أقدر أحظر هذا المستخدم');
-    return;
-  }
-  
-  if (targetUserId === currentUser.id) {
-    showToast('ما تقدر تحظر نفسك');
-    return;
-  }
-  
-  if (!confirm('هل تريد حظر هذا المستخدم؟\n\nلن ترى مشاريعه بعد الآن.')) {
-    return;
-  }
-  
-  try {
-    var result = await sb.from('blocks').insert({
-      blocker_id: currentUser.id,
-      blocked_id: targetUserId
-    });
-    
-    if (result.error) {
-      if (result.error.message && result.error.message.includes('duplicate')) {
-        showToast('محظور من قبل');
-        return;
-      }
-      throw result.error;
-    }
-    
-    showToast('✅ تم الحظر');
-    closeViewProject();
-    if (typeof loadGallery === 'function') loadGallery();
-    
-  } catch (err) {
-    console.error('خطأ الحظر:', err);
-    showToast('فشل الحظر');
-  }
-};
