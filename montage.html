@@ -29,6 +29,11 @@ body:not(.dark-mode) #themeBtn .theme-moon{display:block!important;color:#475569
 body:not(.dark-mode) #themeBtn .theme-sun{display:none!important}
 body.dark-mode #themeBtn .theme-moon{display:none!important}
 body.dark-mode #themeBtn .theme-sun{display:block!important;color:#fbbf24}
+
+/* أزرار overlay المشروع */
+.project-btn-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.project-btn-grid .btn{padding:12px 8px;font-size:13px;font-weight:800}
+.project-btn-grid .btn svg{width:16px!important;height:16px!important}
 </style>
 </head>
 <body>
@@ -569,21 +574,21 @@ body.dark-mode #themeBtn .theme-sun{display:block!important;color:#fbbf24}
   <div style="background:#fff;border-radius:16px;padding:16px;max-height:85vh;overflow-y:auto;">
     <div id="viewProjectPreview" style="background:#0a0a0a;border-radius:12px;min-height:250px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;"></div>
     <div id="viewProjectInfo" style="margin-bottom:16px;"></div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;">
-      <button class="btn btn-export" style="flex:1;padding:12px;" onclick="likeCurrentProject()">
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+    <div class="project-btn-grid">
+      <button class="btn btn-export" onclick="likeCurrentProject()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
         إعجاب
       </button>
-      <button class="btn btn-preview" style="flex:1;padding:12px;" onclick="copyCurrentProject()">
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
-        نسخ للتعديل
+      <button class="btn btn-preview" onclick="copyCurrentProject()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+        نسخ
       </button>
-      <button class="btn" style="flex:1;padding:12px;background:#f59e0b;color:#fff;" onclick="reportProject()">
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg>
+      <button class="btn" style="background:#f59e0b;color:#fff;" onclick="reportProject()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg>
         إبلاغ
       </button>
-      <button class="btn" style="flex:1;padding:12px;background:#dc2626;color:#fff;" onclick="blockCurrentUser()">
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/></svg>
+      <button class="btn" style="background:#dc2626;color:#fff;" onclick="blockCurrentUser()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/></svg>
         حظر
       </button>
     </div>
