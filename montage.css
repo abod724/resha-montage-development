@@ -515,3 +515,52 @@ button{-webkit-user-select:none;user-select:none}
   0%{left:-100%}
   100%{left:100%}
 }
+
+/* ============ CONSENT OVERLAY (شاشة الموافقة) ============ */
+#consentOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: #0f172a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  overflow-y: auto;
+}
+#consentOverlay .auth-card {
+  background: #fff;
+  border-radius: 20px;
+  padding: 28px 22px;
+  width: 100%;
+  max-width: 420px;
+}
+#consentOverlay a {
+  color: #0f172a;
+}
+
+/* Dark mode */
+body.dark-mode #consentOverlay .auth-card {
+  background: #1e293b;
+  color: #f1f5f9;
+}
+body.dark-mode #consentOverlay .auth-title {
+  color: #f1f5f9;
+}
+body.dark-mode #consentOverlay .auth-sub {
+  color: #94a3b8;
+}
+body.dark-mode #consentOverlay label {
+  background: #0f172a !important;
+  border-color: #334155 !important;
+}
+body.dark-mode #consentOverlay label span {
+  color: #f1f5f9 !important;
+}
+body.dark-mode #consentOverlay a {
+  color: #f1f5f9 !important;
+}
+body.dark-mode #consentOverlay div[style*="background:#f1f5f9"] {
+  background: #0f172a !important;
+  color: #cbd5e1 !important;
+}
