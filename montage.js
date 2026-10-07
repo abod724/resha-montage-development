@@ -3128,3 +3128,69 @@ window.addEventListener('load',function(){
     }
   });
 });
+
+// ============ زر الإبلاغ ============
+window.reportProject = async function() {
+  if (!currentUser) { showToast('سجل دخول أولاً'); return; }
+  if (!currentViewProjectId) { showToast('ما فيه مشروع'); return; }
+  
+  var reasons = [
+    '🚨 ابتزاز أو تهديد',
+    '⚠️ تشهير',
+    '🔒 انتهاك خصوصية',
+    '👤 تصوير بدون إذن',
+    '🚫 محتوى غير لائق',
+    '📋 انتهاك حقوق نشر',
+    '❓ سبب آخر'
+  ];
+  
+  var choice = prompt('اختر سبب الإبلاغ (رقم):\n\n' + reasons.map(function(r,i){return (i+1)+'. '+r;}).join('\n'));
+  if (!choice) return;
+  
+  var idx = parseInt(choice) - 1;
+  if (isNaN(idx) || idx < 0 || idx >= reasons.length) { showToast('اختيار غير صحيح'); return; }
+  
+  var details = prompt('تفاصيل إضافية (اختياري):') || '';
+  
+  try {
+    await sb.from('reports').insert({
+      reporter_id: currentUser.id,
+      project_id: currentViewProjectId,
+      reason: reasons[idx],
+      details: details
+    });
+    showToast('✅ تم الإبلاغ — شكراً لك');
+  } catch(err) {
+    console.error(err);
+    showToast('فشل الإبلاغ');
+  }
+};
+
+// ============ زر الحظر ============
+window.blockCurrentUser = async function() {
+  if (!currentUser) { showToast('سجل دخول أولاً'); return; }
+  if (!currentGalleryProject) { showToast('ما فيه مشروع'); return; }
+  
+  var targetId = currentGalleryProject.user_id;
+  if (!targetId) { showToast('ما أقدر أحظر هذا المستخدم'); return; }
+  if (targetId === currentUser.id) { showToast('ما تقدر تحظر نفسك'); return; }
+  
+  if (!confirm('هل تريد حظر هذا المستخدم؟\n\nلن ترى مشاريعه بعد الآن.')) return;
+  
+  try {
+    await sb.from('blocks').insert({
+      blocker_id: currentUser.id,
+      blocked_id: targetId
+    });
+    showToast('✅ تم الحظر');
+    closeViewProject();
+    if (typeof loadGallery === 'function') loadGallery();
+  } catch(err) {
+    if (err.message && err.message.includes('duplicate')) {
+      showToast('محظور من قبل');
+    } else {
+      console.error(err);
+      showToast('فشل الحظر');
+    }
+  }
+};
