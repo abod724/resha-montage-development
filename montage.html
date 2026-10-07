@@ -35,7 +35,46 @@ body.dark-mode #themeBtn .theme-sun{display:block!important;color:#fbbf24}
 </head>
 <body>
 
-<!-- ============ AUTH OVERLAY ============ -->
+<!-- ============ CONSENT OVERLAY ============ -->
+<div id="consentOverlay">
+  <div class="auth-card">
+    <div class="auth-logo">📋</div>
+    <div class="auth-title">شروط الاستخدام</div>
+    <div class="auth-sub">اقرأ الشروط قبل المتابعة</div>
+    <div style="background:#fef2f2;border:2px solid #ef4444;border-radius:12px;padding:14px;margin-bottom:14px;max-height:280px;overflow-y:auto;">
+      <div style="font-size:12px;color:#7f1d1d;font-weight:700;line-height:1.7;">
+        <p style="margin-bottom:10px;"><strong>🚨 ممنوع تماماً:</strong></p>
+        <ul style="margin:0 0 10px 18px;list-style:none;">
+          <li>❌ تصوير أشخاص بدون إذنهم</li>
+          <li>❌ التهديد أو الابتزاز</li>
+          <li>❌ التشهير بأي شخص</li>
+          <li>❌ انتهاك خصوصية الآخرين</li>
+          <li>❌ المحتوى الجنسي أو العنيف</li>
+          <li>❌ انتحال الشخصية</li>
+        </ul>
+        <p style="margin-bottom:10px;"><strong>⚖️ العقوبات:</strong></p>
+        <ul style="margin:0 0 10px 18px;list-style:none;">
+          <li>🚫 حظر فوري للحساب</li>
+          <li>📤 إبلاغ الجهات القانونية</li>
+        </ul>
+      </div>
+    </div>
+    <label style="display:flex;align-items:center;gap:10px;padding:12px;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;margin-bottom:12px;cursor:pointer;">
+      <input type="checkbox" id="consentCheck" style="width:20px;height:20px;cursor:pointer;">
+      <span style="font-size:12px;font-weight:700;color:#0f172a;">قرأت وأوافق على شروط الاستخدام</span>
+    </label>
+    <a href="terms.html" target="_blank" style="display:block;text-align:center;color:#0f172a;font-size:12px;font-weight:700;text-decoration:underline;margin-bottom:12px;">📖 اقرأ الشروط كاملة</a>
+    <div style="background:#f1f5f9;border-radius:10px;padding:12px;margin-bottom:12px;font-size:11px;color:#475569;font-weight:700;line-height:1.7;text-align:center;">
+      📧 للتواصل: <a href="mailto:nibrasalsd@gmail.com" style="color:#0f172a;text-decoration:underline;">nibrasalsd@gmail.com</a>
+    </div>
+    <button id="consentBtn" disabled style="width:100%;padding:14px;border:none;border-radius:12px;background:#cbd5e1;color:#fff;font-family:'Cairo',sans-serif;font-weight:800;font-size:15px;cursor:not-allowed;transition:all .15s;">
+      ✅ متابعة للتسجيل
+    </button>
+  </div>
+</div>
+
+  
+  <!-- ============ AUTH OVERLAY ============ -->
 <div id="authOverlay">
   <div class="auth-card">
     <div class="auth-logo">🎬</div>
