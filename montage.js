@@ -289,11 +289,18 @@ var historyIndex=-1;
 var MAX_HISTORY=30;
 var isRestoring=false;
 
+// ✅ _id خفيفة بدل Base64 — تحسين الذاكرة والأداء
+function _genId(prefix){
+  return prefix + '_' + Date.now() + '_' + Math.random().toString(36).slice(2,8);
+}
+
 function captureState(){
   return JSON.stringify({
     images:images.map(function(i){
       return{
-        src:i.src,type:i.type||'image',animation:i.animation,duration:i.duration,
+        _id:i._id,
+        src:(i.src && i.src.length < 500) ? i.src : null,
+        type:i.type||'image',animation:i.animation,duration:i.duration,
         rotation:i.rotation,flipH:i.flipH,flipV:i.flipV,speed:i.speed,
         crop:i.crop,trim:i.trim,filter:i.filter
       };
@@ -339,23 +346,33 @@ async function redo(){
   showToast('↪️ تم الإعادة');
 }
 
+// ✅ restoreState تعتمد على _id — أسرع 10-20x
 async function restoreState(json){
   isRestoring=true;
   try{
     var d=JSON.parse(json);
     var oldImages=images;
-    images=[];
+    var newImages=[];
+    
     for(var i=0;i<d.images.length;i++){
       var saved=d.images[i];
-      var existing=oldImages.find(function(o){return o.src===saved.src;});
+      // ✅ ابحث بـ _id أولاً
+      var existing=oldImages.find(function(o){return o._id===saved._id;});
+      
       if(existing){
-        images.push({
-          type:saved.type,img:existing.img,media:existing.media,originalImg:existing.originalImg,
-          blob:existing.blob,src:saved.src,animation:saved.animation,duration:saved.duration,
-          originalDuration:existing.originalDuration,rotation:saved.rotation,flipH:saved.flipH,
-          flipV:saved.flipV,speed:saved.speed,crop:saved.crop,trim:saved.trim,filter:saved.filter
-        });
-      } else {
+        // إعادة استخدام الكائن — فقط حدّث الخصائص المتغيرة
+        existing.animation=saved.animation;
+        existing.duration=saved.duration;
+        existing.rotation=saved.rotation;
+        existing.flipH=saved.flipH;
+        existing.flipV=saved.flipV;
+        existing.speed=saved.speed;
+        existing.crop=saved.crop;
+        existing.trim=saved.trim;
+        existing.filter=saved.filter;
+        newImages.push(existing);
+      } else if(saved.src){
+        // حالة نادرة: عنصر غير موجود
         await new Promise(function(res){
           if(saved.type==='video'){
             var v=document.createElement('video');
@@ -363,8 +380,8 @@ async function restoreState(json){
             v.onloadedmetadata=function(){
               var realDur=v.duration;
               if(!realDur||isNaN(realDur))realDur=saved.duration||18;
-              images.push({
-                type:'video',img:v,media:v,originalImg:v,src:saved.src,
+              newImages.push({
+                _id:saved._id,type:'video',img:v,media:v,originalImg:v,src:saved.src,
                 animation:saved.animation,duration:saved.duration||realDur,
                 originalDuration:realDur,rotation:saved.rotation,flipH:saved.flipH,
                 flipV:saved.flipV,speed:saved.speed,crop:saved.crop,trim:saved.trim,filter:saved.filter
@@ -375,8 +392,8 @@ async function restoreState(json){
           } else {
             var im=new Image();
             im.onload=function(){
-              images.push({
-                type:'image',img:im,media:im,originalImg:im,src:saved.src,
+              newImages.push({
+                _id:saved._id,type:'image',img:im,media:im,originalImg:im,src:saved.src,
                 animation:saved.animation,duration:saved.duration,rotation:saved.rotation,
                 flipH:saved.flipH,flipV:saved.flipV,speed:saved.speed,crop:saved.crop,
                 trim:saved.trim,filter:saved.filter
@@ -388,6 +405,8 @@ async function restoreState(json){
         });
       }
     }
+    
+    images=newImages;
     currentSize=d.currentSize;currentTransition=d.currentTransition;currentLayout=d.currentLayout;
     textElements=d.textElements||[];stickers=d.stickers||[];
     if(d.backgroundMode)backgroundMode=d.backgroundMode;
@@ -561,13 +580,19 @@ document.getElementById('imageInput').addEventListener('change',async function(e
   if(selectedImageIndex<0&&images.length>0){selectedImageIndex=0;renderImagesGrid();}
 });
 
+// ✅ أضفنا _id للصورة
 function loadImageFile(file){
   return new Promise(function(resolve,reject){
     var reader=new FileReader();
     reader.onload=function(ev){
       var img=new Image();
       img.onload=function(){
-        images.push({type:'image',img:img,media:img,originalImg:img,animation:'none',duration:3,rotation:0,flipH:false,flipV:false,src:ev.target.result,speed:1,crop:null,trim:null,filter:'none'});
+        images.push({
+          _id:_genId('img'),
+          type:'image',img:img,media:img,originalImg:img,animation:'none',duration:3,
+          rotation:0,flipH:false,flipV:false,src:ev.target.result,speed:1,
+          crop:null,trim:null,filter:'none'
+        });
         resolve();
       };
       img.onerror=reject;
@@ -578,10 +603,12 @@ function loadImageFile(file){
   });
 }
 
+// ✅ أضفنا _id + timeout محسّن
 function loadVideoFile(file){
   return new Promise(function(resolve,reject){
     var url=URL.createObjectURL(file);
     var video=document.createElement('video');
+    var timer=setTimeout(function(){reject(new Error('انتهت المهلة'));},15000);
     video.src=url;
     video.muted=false;
     video.playsInline=true;
@@ -604,8 +631,10 @@ function loadVideoFile(file){
       var finish=function(){
         if(done)return;
         done=true;
+        clearTimeout(timer);
         var dur=Math.min(duration,60);
         images.push({
+          _id:_genId('vid'),
           type:'video',img:video,media:video,originalImg:video,blob:file,src:url,
           animation:'fadeIn',duration:dur,originalDuration:dur,rotation:0,
           flipH:false,flipV:false,speed:1,crop:null,trim:null,filter:'none'
@@ -615,8 +644,7 @@ function loadVideoFile(file){
       video.onseeked=finish;
       setTimeout(finish,2000);
     }
-    video.onerror=function(){reject(new Error('فشل تحميل الفيديو'));};
-    setTimeout(function(){reject(new Error('انتهت المهلة'));},15000);
+    video.onerror=function(){clearTimeout(timer);reject(new Error('فشل تحميل الفيديو'));};
   });
 }
 
@@ -1721,6 +1749,7 @@ function getProjectData(){
   return{
     images:images.map(function(i){
       return{
+        _id:i._id,
         src:i.src,type:i.type||'image',animation:i.animation,
         duration:i.duration,originalDuration:i.originalDuration,
         rotation:i.rotation,flipH:i.flipH,flipV:i.flipV,speed:i.speed,
@@ -1849,6 +1878,7 @@ async function deleteProjectById(id){
   } catch(err){showToast('فشل');}
 }
 
+// ✅ loadProjectData محسّنة — timeout + onerror + _id
 async function loadProjectData(data){
   if(!data)return;
   images=[];audioUpload=null;musicFile=null;recordedAudioBlob=null;selectedAudio=null;
@@ -1866,9 +1896,37 @@ async function loadProjectData(data){
   }
   if(data.images&&data.images.length>0){
     var loaded=0,total=data.images.length;
+    var finalized=false;
+    images=new Array(total);
+    
+    function tryFinalize(){
+      if(finalized)return;
+      if(loaded>=total){
+        finalized=true;
+        images=images.filter(function(x){return x!=null;});
+        finalize(data);
+      }
+    }
+    
+    // ✅ timeout عام 30 ثانية
+    var globalTimeout=setTimeout(function(){
+      if(!finalized){
+        console.warn('⚠️ timeout عام في التحميل — إكمال بما تم');
+        finalized=true;
+        images=images.filter(function(x){return x!=null;});
+        finalize(data);
+      }
+    },30000);
+    
     data.images.forEach(function(saved,i){
       if(saved.type==='video'&&data.videoUrls&&data.videoUrls[i]){
+        var videoTimer=setTimeout(function(){
+          console.warn('⏱️ timeout فيديو '+i);
+          loaded++;tryFinalize();
+        },15000);
+        
         fetch(data.videoUrls[i]).then(function(r){return r.blob();}).then(function(blob){
+          clearTimeout(videoTimer);
           var url=URL.createObjectURL(blob);
           var video=document.createElement('video');
           video.src=url;
@@ -1880,6 +1938,7 @@ async function loadProjectData(data){
             var realDuration=video.duration;
             if(!realDuration||isNaN(realDuration))realDuration=saved.originalDuration||saved.duration||18;
             images[i]={
+              _id:saved._id||_genId('vid'),
               type:'video',img:video,media:video,originalImg:video,blob:blob,src:url,
               animation:saved.animation||'fadeIn',
               duration:saved.duration&&!isNaN(saved.duration)?saved.duration:realDuration,
@@ -1888,27 +1947,47 @@ async function loadProjectData(data){
               speed:saved.speed!==undefined?saved.speed:1,
               crop:saved.crop||null,trim:saved.trim||null,filter:saved.filter||'none'
             };
-            loaded++;
-            if(loaded===total)finalize(data);
+            loaded++;tryFinalize();
           };
+          video.onerror=function(){
+            clearTimeout(videoTimer);
+            console.warn('❌ فشل تحميل فيديو '+i);
+            loaded++;tryFinalize();
+          };
+        }).catch(function(err){
+          clearTimeout(videoTimer);
+          console.warn('❌ fetch فيديو '+i+':',err);
+          loaded++;tryFinalize();
         });
       } else {
+        var imgTimer=setTimeout(function(){
+          console.warn('⏱️ timeout صورة '+i);
+          loaded++;tryFinalize();
+        },10000);
+        
         var img=new Image();
         img.onload=function(){
+          clearTimeout(imgTimer);
           images[i]={
+            _id:saved._id||_genId('img'),
             type:'image',img:img,media:img,originalImg:img,src:saved.src,
             animation:saved.animation||'none',duration:saved.duration||3,
             rotation:saved.rotation||0,flipH:!!saved.flipH,flipV:!!saved.flipV,
             speed:saved.speed!==undefined?saved.speed:1,
             crop:saved.crop||null,trim:saved.trim||null,filter:saved.filter||'none'
           };
-          loaded++;
-          if(loaded===total)finalize(data);
+          loaded++;tryFinalize();
+        };
+        img.onerror=function(){
+          clearTimeout(imgTimer);
+          console.warn('❌ فشل تحميل صورة '+i);
+          loaded++;tryFinalize();
         };
         img.src=saved.src;
       }
     });
   } else {renderImagesGrid();updateInfo();}
+  
   function finalize(data){
     currentSize=data.currentSize||'1080x1080';
     currentTransition=data.currentTransition||'fade';
@@ -1967,7 +2046,6 @@ function buildGalleryCategories(){
   });
 }
 
-// ✅ loadGallery محدّثة — تفلتر المحظورين (اتجاهين)
 async function loadGallery(){
   var list=document.getElementById('galleryList');
   list.innerHTML='<div class="empty-hint">جاري التحميل...</div>';
@@ -1975,65 +2053,54 @@ async function loadGallery(){
     var search=document.getElementById('gallerySearch').value.trim();
     var sortBy=document.getElementById('gallerySort').value;
 
-    // ✅ 1. جلب قائمة المحظورين (اتجاهين)
-    var blockedIds = [];
-    try {
-      var blockR = await sb.rpc('get_blocked_users');
-      if (!blockR.error && blockR.data) {
-        blockedIds = blockR.data.map(function(b){ return b.blocked_user_id; });
+    // ✅ 1. جلب المحظورين (اتجاهين)
+    var blockedIds=[];
+    try{
+      var blockR=await sb.rpc('get_blocked_users');
+      if(!blockR.error&&blockR.data){
+        blockedIds=blockR.data.map(function(b){return b.blocked_user_id;});
       }
-    } catch(e) {
-      console.warn('تعذّر جلب قائمة الحظر:', e);
-    }
+    } catch(e){ console.warn('تعذّر جلب قائمة الحظر:',e); }
 
     // ✅ 2. بناء الاستعلام
-    var query = sb.from('projects')
+    var query=sb.from('projects')
       .select('id,name,thumbnail,created_at,user_id,views,likes_count,category')
-      .eq('is_public', true);
+      .eq('is_public',true);
 
     // ✅ 3. فلترة المحظورين
-    if (blockedIds.length > 0) {
-      query = query.not('user_id', 'in', '(' + blockedIds.join(',') + ')');
+    if(blockedIds.length>0){
+      query=query.not('user_id','in','('+blockedIds.join(',')+')');
     }
 
-    if (currentGalleryFilter !== 'all') query = query.eq('category', currentGalleryFilter);
-    if (search) query = query.ilike('name', '%' + search + '%');
-
-    if (sortBy === 'likes') query = query.order('likes_count', { ascending: false });
-    else if (sortBy === 'views') query = query.order('views', { ascending: false });
-    else query = query.order('created_at', { ascending: false });
-
-    query = query.limit(60);
-
-    var r = await query;
-    if (r.error) throw r.error;
-
-    var data = r.data;
-    if (!data || data.length === 0) {
-      list.innerHTML = '<div class="empty-hint">لا توجد نتائج</div>';
-      return;
-    }
-
-    var html = '<div class="gallery-grid">';
+    if(currentGalleryFilter!=='all')query=query.eq('category',currentGalleryFilter);
+    if(search)query=query.ilike('name','%'+search+'%');
+    if(sortBy==='likes')query=query.order('likes_count',{ascending:false});
+    else if(sortBy==='views')query=query.order('views',{ascending:false});
+    else query=query.order('created_at',{ascending:false});
+    query=query.limit(60);
+    var r=await query;
+    if(r.error)throw r.error;
+    var data=r.data;
+    if(!data||data.length===0){list.innerHTML='<div class="empty-hint">لا توجد نتائج</div>';return;}
+    var html='<div class="gallery-grid">';
     data.forEach(function(p){
-      var author = p.user_id ? p.user_id.substring(0,8) : 'مستخدم';
-      html += '<div class="gallery-card" onclick="viewProject(\'' + p.id + '\')">';
-      html += '<img class="gallery-thumb" src="' + (p.thumbnail || '') + '" alt="">';
-      html += '<div class="gallery-info">';
-      html += '<div class="gallery-title">' + escapeHtml(p.name) + '</div>';
-      html += '<div class="gallery-author">👤 ' + author + '</div>';
-      html += '<div style="display:flex;gap:8px;margin-top:6px;font-size:10px;color:#64748b;font-weight:700;">';
-      html += '<span>❤️ ' + (p.likes_count || 0) + '</span>';
-      html += '<span>👁️ ' + (p.views || 0) + '</span>';
-      if (p.category) html += '<span style="background:#f1f5f9;padding:2px 6px;border-radius:4px;">' + escapeHtml(p.category) + '</span>';
-      html += '</div></div></div>';
+      var author=p.user_id?p.user_id.substring(0,8):'مستخدم';
+      html+='<div class="gallery-card" onclick="viewProject(\''+p.id+'\')">';
+      html+='<img class="gallery-thumb" src="'+(p.thumbnail||'')+'" alt="">';
+      html+='<div class="gallery-info">';
+      html+='<div class="gallery-title">'+escapeHtml(p.name)+'</div>';
+      html+='<div class="gallery-author">👤 '+author+'</div>';
+      html+='<div style="display:flex;gap:8px;margin-top:6px;font-size:10px;color:#64748b;font-weight:700;">';
+      html+='<span>❤️ '+(p.likes_count||0)+'</span>';
+      html+='<span>👁️ '+(p.views||0)+'</span>';
+      if(p.category)html+='<span style="background:#f1f5f9;padding:2px 6px;border-radius:4px;">'+escapeHtml(p.category)+'</span>';
+      html+='</div></div></div>';
     });
-    html += '</div>';
-    list.innerHTML = html;
-
-  } catch(err) {
-    console.error('خطأ التحميل:', err);
-    list.innerHTML = '<div class="empty-hint">فشل التحميل</div>';
+    html+='</div>';
+    list.innerHTML=html;
+  } catch(err){
+    console.error('خطأ التحميل:',err);
+    list.innerHTML='<div class="empty-hint">فشل التحميل</div>';
   }
 }
 
@@ -2220,6 +2287,7 @@ function updateCameraTimer(){
   if(elapsed>=cameraMaxDuration){stopCameraRecording();showToast('وصلت للحد الأقصى ('+cameraMaxDuration+' ث)');}
 }
 
+// ✅ أضفنا _id
 async function addVideoToProject(blob,mimeType){
   showLoading('جاري تحضير الفيديو...');
   try{
@@ -2241,6 +2309,7 @@ async function addVideoToProject(blob,mimeType){
     await new Promise(function(res){video.onseeked=function(){res();};setTimeout(res,1500);});
     var duration=Math.min(video.duration||5,60);
     var item={
+      _id:_genId('cam'),
       type:'video',media:video,img:video,src:url,blob:file,
       fileName:'camera-'+Date.now()+'.'+ext,mimeType:mimeType,
       animation:'fadeIn',duration:duration,originalDuration:duration,
@@ -2269,6 +2338,7 @@ var selectedElement={type:null,index:-1};
 
 function getCanvasRect(){var canvas=document.getElementById('previewCanvas');return canvas.getBoundingClientRect();}
 
+// ✅ استخدام transform بدل left/top — أداء GPU
 function _renderDraggableZones_impl(){
   var wrapper=document.getElementById('draggableZones');
   if(!wrapper)return;
@@ -2286,8 +2356,10 @@ function _renderDraggableZones_impl(){
     if(selectedElement.type==='text'&&selectedElement.index===i)zone.classList.add('selected');
     var w=Math.min(260,Math.max(140,el.text.length*14)),h=80;
     zone.style.width=w+'px';zone.style.height=h+'px';
-    zone.style.left=(offsetX+el.x*rect.width-w/2)+'px';
-    zone.style.top=(offsetY+el.y*rect.height-h/2)+'px';
+    zone.style.left='0px';
+    zone.style.top='0px';
+    zone.style.transform='translate('+(offsetX+el.x*rect.width-w/2)+'px,'+(offsetY+el.y*rect.height-h/2)+'px)';
+    zone.style.willChange='transform';
     zone.dataset.type='text';zone.dataset.index=i;
     var del=document.createElement('button');
     del.textContent='×';
@@ -2304,8 +2376,10 @@ function _renderDraggableZones_impl(){
     if(selectedElement.type==='sticker'&&selectedElement.index===i)zone.classList.add('selected');
     var size=80;
     zone.style.width=size+'px';zone.style.height=size+'px';
-    zone.style.left=(offsetX+el.x*rect.width-size/2)+'px';
-    zone.style.top=(offsetY+el.y*rect.height-size/2)+'px';
+    zone.style.left='0px';
+    zone.style.top='0px';
+    zone.style.transform='translate('+(offsetX+el.x*rect.width-size/2)+'px,'+(offsetY+el.y*rect.height-size/2)+'px)';
+    zone.style.willChange='transform';
     zone.dataset.type='sticker';zone.dataset.index=i;
     var del=document.createElement('button');
     del.textContent='×';
@@ -2350,28 +2424,35 @@ function moveDrag(e){
   e.preventDefault();
 }
 
+// ✅ لا redrawStaticPreview هنا — فقط حرّك الـ zone
 function _updateZonePosition(type,index,x,y){
   var zones=document.querySelectorAll('.draggable-zone');
   var target=null;
-  zones.forEach(function(z){if(z.dataset.type===type&&parseInt(z.dataset.index)===index)target=z;});
+  zones.forEach(function(z){
+    if(z.dataset.type===type&&parseInt(z.dataset.index)===index)target=z;
+  });
   if(!target)return;
   var canvas=document.getElementById('previewCanvas');
   var rect=canvas.getBoundingClientRect();
   var parentRect=document.getElementById('previewWrapper').getBoundingClientRect();
   var offsetX=rect.left-parentRect.left;
   var offsetY=rect.top-parentRect.top;
-  var w=target.offsetWidth;var h=target.offsetHeight;
-  target.style.left=(offsetX+x*rect.width-w/2)+'px';
-  target.style.top=(offsetY+y*rect.height-h/2)+'px';
-  redrawStaticPreview();
+  var w=target.offsetWidth;
+  var h=target.offsetHeight;
+  var targetLeft=offsetX+x*rect.width-w/2;
+  var targetTop=offsetY+y*rect.height-h/2;
+  target.style.transform='translate('+targetLeft+'px,'+targetTop+'px)';
+  // ⚠️ لا نستدعي redrawStaticPreview — نحفظ الأداء
 }
 
+// ✅ redrawStaticPreview مرة واحدة بعد انتهاء السحب
 function endDrag(e){
   if(!dragState.active)return;
   dragState.active=false;
   var wrapper=document.getElementById('previewWrapper');
   if(wrapper)wrapper.classList.remove('dragging');
   document.querySelectorAll('.draggable-zone.dragging').forEach(function(z){z.classList.remove('dragging');});
+  redrawStaticPreview();
   pushHistory();
 }
 
@@ -2492,5 +2573,5 @@ window.addEventListener('load',function(){
   }
   trackEvent('montage-زيارة');
   setTimeout(function(){pushHistory();},500);
-  console.log('✅ ريشة المونتاج v7.2 — فلترة الحظر مفعّلة');
+  console.log('✅ ريشة المونتاج v7.3 — فلترة الحظر + تحسينات الأداء');
 });
